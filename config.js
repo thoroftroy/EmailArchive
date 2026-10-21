@@ -6,7 +6,7 @@
  * See OAUTH_SETUP.md for how to create a Client ID.
  */
 window.ARCHIVE_CONFIG = {
-  CLIENT_ID: "293943522937-9jrk62a8gqkf20gchc9rrhu3dpdvv0tb.apps.googleusercontent.com",
+  CLIENT_ID: "293943522937-fp32hbt8bbigmrcqaivghghki01f8ccs.apps.googleusercontent.com",
 
   // Read only Gmail scope. Do not change unless you know what you are doing.
   SCOPES: "https://www.googleapis.com/auth/gmail.readonly",
