@@ -56,8 +56,16 @@
 
     <div class="perms" id="access-note">
       <strong>Access is by approval.</strong> Only selected users can sign in. If you are not approved you will see Access blocked.
-      To get added, send your Gmail address to <code>rednave.riddle@gmail.com</code> using the button. You will get in after you are added.<br>
-      <a class="btn secondary" id="btn-request-access" href="mailto:rednave.riddle@gmail.com?subject=Gmail%20Archive%20access%20request&body=Hi%2C%20please%20add%20me%20as%20a%20selected%20user.%0AMy%20Gmail%20is%3A%20">Request access by email</a>
+      Type your Gmail below and press Send. You will get in after you are added.
+      <div class="row">
+        <div>
+          <label for="request-email">Your Gmail</label>
+          <input type="email" id="request-email" placeholder="you@gmail.com" autocomplete="email">
+        </div>
+      </div>
+      <button class="btn secondary" id="btn-send-request" type="button">Send request</button>
+      <p class="small muted" id="request-status" aria-live="polite"></p>
+      <p class="small muted">No mail app needed. If sending fails here, email <code>rednave.riddle@gmail.com</code> from your Gmail instead.</p>
     </div>
 
     <div id="client-id-wrap">
@@ -244,7 +252,7 @@
       </ol>
     </details>
     <details><summary>Access blocked or 403 or sign in loops</summary>
-      <p>This usually means you are not approved yet. Only selected users can sign in. Use the Request access by email button in Step 1 to send your Gmail to <code>rednave.riddle@gmail.com</code>. After you are added, wait a few minutes and try again in a fresh Firefox tab. Also allow popups for this site and check the Step 1 code box for extra spaces.</p>
+      <p>This usually means you are not approved yet. Only selected users can sign in. Use Send request in Step 1. Type your Gmail and press Send. After you are added, wait a few minutes and try again in a fresh Firefox tab. Also allow popups for this site and check the Step 1 code box for extra spaces.</p>
     </details>
     <details><summary>The app says INCOMPLETE</summary>
       <p>Most times this is a short net cut or Gmail rate limit. Press Build my archive again. It is safe. It reads again. For big mail boxes, lower Max mails and run smaller date ranges.</p>

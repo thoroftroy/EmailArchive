@@ -100,7 +100,7 @@
    console.error(e);
    const msg = String((e && e.message) || e);
    if (msg.indexOf("access_denied") >= 0 || msg.indexOf("403") >= 0 || msg.toLowerCase().indexOf("blocked") >= 0) {
-    toast("Sign in blocked. Only selected users can sign in. Use Request access by email in Step 1 to send your Gmail to rednave.riddle@gmail.com.", "err");
+    toast("Sign in blocked. Only selected users can sign in. Use Send request in Step 1. Type your Gmail and press Send.", "err");
    } else {
     toast("Sign in failed: " + msg, "err");
    }
@@ -581,7 +581,38 @@
   });
  }
 
- // Wire up
+ async function sendAccessRequest() {
+   const input = $("request-email");
+   const status = $("request-status");
+   const btn = $("btn-send-request");
+   const say = (s) => { if (status) status.textContent = s; };
+   const email = ((input && input.value) || "").trim();
+   if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) {
+    say("Type your full Gmail first, like you@gmail.com.");
+    toast("Type your full Gmail first.", "err");
+    return;
+   }
+   if (btn) btn.disabled = true;
+   say("Sending. One moment.");
+   try {
+    const res = await fetch("https://formsubmit.co/ajax/rednave.riddle@gmail.com", {
+     method: "POST",
+     headers: { "Content-Type": "application/json", "Accept": "application/json" },
+     body: JSON.stringify({ email: email, name: email, _subject: "Gmail Archive access request", message: "Please add me as a selected user. My Gmail is: " + email })
+    });
+    if (!res.ok) throw new Error("send failed " + res.status);
+    say("Request sent for " + email + ". You will get in after you are added. Try signing in again in a few minutes.");
+    toast("Request sent.");
+    if (input) input.value = "";
+   } catch (e) {
+    say("Could not send here. Email rednave.riddle@gmail.com from your Gmail instead and include: " + email);
+    toast("Send failed here. Email rednave.riddle@gmail.com instead.", "err");
+   } finally {
+    if (btn) btn.disabled = false;
+   }
+  }
+
+  // Wire up
 
  function init() {
   if (location.protocol === "file:") {
@@ -628,6 +659,8 @@
   $("btn-sample").addEventListener("click", () => {
    $("senders").value = "example@gmail.com";
    toast("Sample sender filled in. Replace it with the real address.");
+  const sendBtn = $("btn-send-request");
+  if (sendBtn) sendBtn.addEventListener("click", sendAccessRequest);
   });
 
   refreshConnectUI();
