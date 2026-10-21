@@ -4,6 +4,12 @@ Save Gmail chats to your computer. Pick who the mails are from, pick dates, pres
 
 The ZIP has a PDF you can read plus the original mails and files.
 
+## Links
+
+  * Live site: [https://thoroftroy.github.io/EmailArchive/](https://thoroftroy.github.io/EmailArchive/)
+  * Privacy: [https://thoroftroy.github.io/EmailArchive/privacy.html](https://thoroftroy.github.io/EmailArchive/privacy.html)
+  * Terms: [https://thoroftroy.github.io/EmailArchive/terms.html](https://thoroftroy.github.io/EmailArchive/terms.html)
+
 ## How to open it
 
 1. Open a terminal in this folder.
