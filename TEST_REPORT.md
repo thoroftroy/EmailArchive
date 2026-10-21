@@ -32,7 +32,7 @@ node --test tests/
 This part needs your own Google Client ID. Actions cannot do it.
 
   1. In this folder run `python3 -m http.server 8000`
-  2. Open `http://localhost:8000` in Chrome. Do not double click the file.
+  2. Open `http://localhost:8000` in Firefox. Do not double click the file.
   3. Step 1: paste Client ID, press Sign in with Google. Your address should show.
   4. Step 2: enter a sender and dates. Press Search and preview. Rows should show.
   5. Step 4: leave defaults. Press Build my archive. The log should show download, then PDF, then ZIP.

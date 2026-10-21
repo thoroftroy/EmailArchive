@@ -20,7 +20,7 @@ Open a terminal in this folder and run:
 python3 -m http.server 8000
 ```
 
-Then open this in Chrome or Edge:
+Then open this in Firefox:
 
 ```
 http://localhost:8000
