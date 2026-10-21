@@ -40,7 +40,7 @@
   requestAccessToken(clientId) {
    const cid = String(clientId || this.configuredClientId()).trim();
    if (!cid || cid === "PASTE_YOUR_CLIENT_ID_HERE") {
-    throw new Error("Missing Client ID. Create one in Google Cloud Console (see OAUTH_SETUP.md) and paste it in Step 1.");
+    throw new Error("Missing sign in code. Paste it in Step 1.");
    }
    if (!this.ensureGisLoaded()) {
     throw new Error("Google sign-in library is still loading or blocked. Check your connection / ad-blocker and reload.");
