@@ -611,7 +611,12 @@
      headers: { "Content-Type": "application/json", "Accept": "application/json" },
      body: JSON.stringify({ email: email, name: email, _subject: "Gmail Archive access request", message: "Please add me as a selected user. My Gmail is: " + email })
     });
-    if (!res.ok) throw new Error("send failed " + res.status);
+    let data = null;
+    try { data = await res.json(); } catch (e) { data = null; }
+    if (!res.ok || !data || (data.success !== true && data.success !== "true")) {
+     const why = (data && data.message) ? String(data.message) : ("send failed " + res.status);
+     throw new Error(why);
+    }
     say("Request sent for " + email + ". You will get in after you are added. Try signing in again in a few minutes.");
     toast("Request sent.");
     if (input) input.value = "";
