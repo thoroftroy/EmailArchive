@@ -23,6 +23,7 @@ main{max-width:980px;margin:0 auto;padding:20px 16px 80px}
 .step{
   flex:1 1 140px;background:var(--card);border:1px solid var(--line);border-radius:999px;
   padding:8px 12px;font-size:.85rem;color:var(--muted);text-align:center;white-space:nowrap;
+  cursor:pointer;
 }
 .step.active{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:600}
 .step.done{background:#e8f0fe;color:var(--brand-dark);border-color:#c9dbff}

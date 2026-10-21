@@ -39,6 +39,15 @@
   window.scrollTo({ top: 0, behavior: "smooth" });
  }
 
+ function goStep(n) {
+  if (n === 5 && !state.searchResults.length) {
+   toast("Search first. Pick senders and press Search and preview.", "err");
+   setStep(2);
+   return;
+  }
+  setStep(n);
+ }
+
  function setProgress(pct, label) {
   const pctClamped = Math.max(0, Math.min(100, pct));
   const bar = $("progress-bar"), txt = $("progress-label");
@@ -101,8 +110,10 @@
    const msg = String((e && e.message) || e);
    if (msg.indexOf("access_denied") >= 0 || msg.indexOf("403") >= 0 || msg.toLowerCase().indexOf("blocked") >= 0) {
     toast("Sign in blocked. Only selected users can sign in. Use Send request in Step 1. Type your Gmail and press Send.", "err");
+   } else if (/popup|closed|dismiss/i.test(msg)) {
+    toast("Popup closed or blocked. Allow popups for this site and for Google, then try again.", "err");
    } else {
-    toast("Sign in failed: " + msg, "err");
+    toast("Sign in failed: " + msg + ". If it keeps failing, turn off tracking protection for this site and for Google, allow popups, reload, and try again.", "err");
    }
   }
  }
@@ -640,9 +651,18 @@
   const yearEl = $("year");
   if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 
-  $$("[data-goto]").forEach((b) => b.addEventListener("click", () => setStep(Number(b.dataset.goto))));
+  $$("[data-goto]").forEach((b) => b.addEventListener("click", () => goStep(Number(b.dataset.goto))));
+  $$(".stepper .step").forEach((el) => {
+   el.setAttribute("role", "button");
+   el.setAttribute("tabindex", "0");
+   el.setAttribute("title", "Go to this step");
+   el.addEventListener("click", () => goStep(Number(el.dataset.step)));
+   el.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); goStep(Number(el.dataset.step)); }
+   });
+  });
   $("btn-preview").addEventListener("click", doPreview);
-  $("btn-to-customize").addEventListener("click", () => setStep(4));
+  $("btn-to-customize").addEventListener("click", () => goStep(4));
   $("btn-export").addEventListener("click", doExport);
   $("btn-cancel-export").addEventListener("click", () => { state.cancelled = true; });
   $("btn-cancel-preview").addEventListener("click", () => { state.cancelled = true; });
