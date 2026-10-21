@@ -615,7 +615,7 @@
    const status = $("request-status");
    const btn = $("btn-send-request");
    const say = (s) => { if (status) status.textContent = s; };
-   const email = ((input && input.value) || "").trim();
+   const email = ((input && input.value) || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
    if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) {
     say("Type your full Gmail first, like you@gmail.com.");
     toast("Type your full Gmail first.", "err");
@@ -644,6 +644,28 @@
    } finally {
     if (btn) btn.disabled = false;
    }
+  }
+
+  var APP_BUILD = "2026-10-22b";
+
+  function updateDebugInfo() {
+   const el = $("debug-info");
+   if (!el) return;
+   let gis = "no";
+   try { gis = (window.google && window.google.accounts && window.google.accounts.oauth2) ? "yes" : "no"; } catch (e) { gis = "error"; }
+   let cid = "";
+   try {
+    const full = state.gmail ? state.gmail.configuredClientId() : ((window.ARCHIVE_CONFIG && window.ARCHIVE_CONFIG.CLIENT_ID) || "");
+    cid = full ? (String(full).slice(0, 16) + "...") : "(missing)";
+   } catch (e) { cid = "(error)"; }
+   el.textContent =
+    "Build: " + APP_BUILD + "\n" +
+    "Page address: " + String(location.href) + "\n" +
+    "Google library loaded: " + gis + "\n" +
+    "Sign in code starts: " + cid + "\n" +
+    "Signed in now: " + (state.gmail && state.gmail.isSignedIn() ? "yes" : "no");
+   const ver = $("app-version");
+   if (ver) ver.textContent = APP_BUILD;
   }
 
   // Wire up
@@ -727,6 +749,16 @@
   });
   maybeFinishRedirect();
 
+  const copyBtn = $("btn-copy-debug");
+  if (copyBtn) copyBtn.addEventListener("click", () => {
+   updateDebugInfo();
+   const txt = ($("debug-info") && $("debug-info").textContent) || "";
+   const done = () => toast("Details copied.");
+   const fallback = () => { toast("Copy failed. Select the text by hand.", "err"); };
+   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, fallback);
+   else fallback();
+  });
+  updateDebugInfo();
   refreshConnectUI();
   renderHistory();
   setStep(1);

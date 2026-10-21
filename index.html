@@ -13,7 +13,7 @@
 <script src="js/gmail.js?v=4" defer></script>
 <script src="js/pdf.js?v=4" defer></script>
 <script src="js/export.js?v=4" defer></script>
-<script src="js/app.js?v=4" defer></script>
+<script src="js/app.js?v=5" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
@@ -83,9 +83,16 @@
     </div>
     <p class="small muted">Use redirect sign in if the Google popup opens but never finishes. Google will leave this page and come back signed in.</p>
 
+    <details id="debug-box">
+      <summary>Having trouble signing in? Technical details</summary>
+      <pre class="query" id="debug-info">Loading.</pre>
+      <button class="btn ghost" id="btn-copy-debug" type="button">Copy details</button>
+    </details>
+
     <details>
       <summary>Privacy in plain words</summary>
       <p>Your mails come from Google straight into this page. They are packed into a ZIP you download. There is no server. No stats. No uploads. Sign out clears the token from this browser. The token is never written to logs.</p>
+      <p class="small">Full documents: <a href="privacy.html">Privacy policy</a> and <a href="terms.html">Terms</a>.</p>
     </details>
 
     <div class="navrow">
@@ -269,7 +276,8 @@
 </main>
 
 <footer>
-  <p><span id="year"></span> Gmail Archive. The PDF is for reading. The <code>.eml</code> files are the originals. <a href="privacy.html">Privacy</a> <a href="terms.html">Terms</a></p>
+  <p><span id="year"></span> Gmail Archive. The PDF is for reading. The <code>.eml</code> files are the originals.</p>
+  <p class="small"><a href="privacy.html">Privacy policy</a> <a href="terms.html">Terms</a> <span class="muted">Build <span id="app-version"></span></span></p>
 </footer>
 
 <div class="toast" id="toast" role="status"></div>
