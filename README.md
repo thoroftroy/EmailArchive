@@ -1,64 +1,70 @@
-# Gmail Archive — GitHub Pages site
+# Gmail Archive
 
-A 100% static website (no server, no build step) that lets anyone — even with zero technical knowledge — sign in with Google (read-only) and archive Gmail conversations:
+A small website that saves Gmail threads to your computer. You sign in with Google, pick senders and dates, and you get a ZIP with a PDF plus the original files.
 
-- Pick sender(s) + inclusive date range → preview counts
-- Whole conversation threads included (replies from everyone), oldest → newest
-- One click builds a **ZIP** containing:
-  - `master-archive.pdf` — one big readable document (video/audio shown as placeholders, never embedded)
-  - `emails/<sender>/<thread>/*.eml` — original MIME per message
-  - `attachments/<sender>/*` — original files, deduped safely (video/audio separately or skipped, your choice)
-  - `manifest.csv`, `checksums.sha256`, `export.log`, `errors.json`, `README.txt`
-- Progress bars, cancellation, retry-safe, integrity verification, history, help
+What you get in the ZIP:
+  * `master-archive.pdf` for reading
+  * `emails/` with the original `.eml` files
+  * `attachments/` with the original files
+  * `manifest.csv` with a list of what was saved
+  * `checksums.sha256` to check files later
+  * `export.log`, `errors.json`, `README.txt` that say what happened
 
-Live on GitHub Pages. All processing happens locally in the browser; nothing is uploaded anywhere.
+Everything runs in your browser. Nothing is sent to a server.
 
-## Quick start (try it locally)
+## Try it on your computer
+
+Open a terminal in this folder and run:
 
 ```bash
-cd gmail-archive-pages
 python3 -m http.server 8000
-# open http://localhost:8000
 ```
 
-> Must use `http://localhost:8000` (not `file://`) so Google sign-in + WebCrypto work.
+Then open this in Chrome or Edge:
 
-## Deploy to GitHub Pages
-
-### Option A — click-through (easiest)
-
-1. Create a **private** repo on GitHub (e.g. `gmail-archive`), upload these files to the `main` branch.
-2. Repo → **Settings → Pages** → Source: **GitHub Actions**.
-3. Push — the included workflow (`.github/workflows/pages.yml`) runs tests then deploys.
-4. Your site: `https://YOUR-USERNAME.github.io/gmail-archive/`
-
-### Option B — command line
-
-```bash
-cd gmail-archive-pages
-git init -b main
-git add .
-git commit -m "Gmail Archive Pages site"
-gh repo create gmail-archive --private --source=. --push   # or: git remote add origin <url>; git push -u origin main
-# then enable Pages → GitHub Actions in repo Settings
+```
+http://localhost:8000
 ```
 
-See `OAUTH_SETUP.md` (required: create a free Google OAuth Client ID) and `USER_GUIDE.md` (for end users).
+Do not double click `index.html`. If you open it as a file, Google sign in will not work. You have to use the address above.
 
-## Files
+## Put it on GitHub Pages
 
-| File | Purpose |
-|---|---|
-| `index.html` | 5-step wizard UI |
-| `styles.css` | Polished responsive styling |
-| `config.js` | Public config (Client ID placeholder) |
-| `js/utils.js` | Pure helpers (unit-tested) |
-| `js/gmail.js` | Gmail API + OAuth layer |
-| `js/pdf.js` | Master PDF builder (jsPDF) |
-| `js/export.js` | ZIP + CSV + logs + SHA-256 |
-| `js/app.js` | Wizard wiring, progress, history |
-| `tests/` | `node --test` unit tests |
-| `.github/workflows/pages.yml` | Test + deploy to Pages |
+GitHub Pages on a free account only works if the repo is public. If your repo is private, the site will give a 404. Make it public first.
+
+Steps:
+
+  1. Push this folder to GitHub on the `main` branch.
+  2. On GitHub open Settings, then Pages.
+  3. Under Source pick GitHub Actions.
+  4. Push again or press Run workflow. The file in `.github/workflows/pages.yml` will test and publish the site.
+  5. Your site will be at `https://YOURNAME.github.io/EmailArchive/`
+
+If you see a 404 after that, check these:
+  * Repo is public, not private.
+  * Pages Source is set to GitHub Actions, not Deploy from a branch.
+  * The workflow finished with a green check under the Actions tab.
+  * You waited a minute and refreshed.
+
+To make a private repo public:
+  * On the GitHub website open the repo, open Settings, scroll to Danger Zone, press Change visibility, pick Public. Or run `gh repo edit YOURNAME/EmailArchive --visibility public`.
+
+## Setup you have to do once
+
+Google asks you to register the site before sign in works. That means creating an OAuth Client ID. The full steps are in `OAUTH_SETUP.md`. Short version: turn on Gmail API, add the read only scope, add your site address to Authorized JavaScript origins, paste the Client ID into the site.
+
+You need these two origins in Google Cloud Console:
+  * `https://YOURNAME.github.io`
+  * `http://localhost:8000`
+
+## Files in this folder
+
+  * `index.html` is the site
+  * `styles.css` is the layout
+  * `config.js` holds the Client ID placeholder
+  * `js/` holds the code. `utils.js` has small helpers. `gmail.js` talks to Gmail. `pdf.js` builds the PDF. `export.js` builds the ZIP. `app.js` ties the buttons together.
+  * `tests/` has checks you can run with `node --test tests/`
+  * `.github/workflows/pages.yml` is the Pages publish job
 
 ## Tests
 
@@ -66,9 +72,11 @@ See `OAUTH_SETUP.md` (required: create a free Google OAuth Client ID) and `USER_
 node --test tests/
 ```
 
-## Privacy & honesty notes (also shown in-app)
+More detail is in `TEST_REPORT.md`.
 
-- Read-only Gmail scope only. No password handled. Sign-out revokes the token.
-- PDFs are convenient reading copies; `.eml` files are the originals.
-- `checksums.sha256` detects accidental changes — it does not by itself prove authenticity or completeness. Compare `manifest.csv` counts with the preview.
-- If any file fails, the app reports **INCOMPLETE** and never claims success.
+## Notes on safety
+
+  * The site only asks for Gmail read access. It can read mail. It cannot send or delete mail.
+  * The PDF is for reading. The `.eml` files are the originals.
+  * `checksums.sha256` can show if a file changed later. It does not prove who sent the mail.
+  * If any file fails to save, the site says INCOMPLETE. It does not say done when files are missing.

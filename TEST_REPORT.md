@@ -1,39 +1,52 @@
-# Test report — Gmail Archive Pages site
+# Test report
 
-Date: 2026-10-20 (UTC) · Ran locally + in CI (`.github/workflows/pages.yml` runs `node --test tests/` on every push).
+Date: 2026-10-21. Ran on this computer and in GitHub Actions.
 
-## Automated unit tests (`node --test tests/`)
+## Auto checks
 
-File: `tests/utils.test.mjs` — 12 tests, 8 suites. Result: **12 pass, 0 fail**.
+File: `tests/utils.test.mjs`. 12 tests in 8 groups. Result: 12 pass, 0 fail.
 
-- `sanitizeFilename`: strips `<>:"/\|?*`, handles empty → `unnamed`, truncates long names preserving `.pdf`.
-- `buildGmailQuery`: single sender + inclusive dates → `from:a@x.com after:2024/01/05 before:2024/02/11` (end+1 for inclusive `before:`); multi-sender OR; empty → `""`.
-- `isDateInRange`: start/end inclusive (00:00 UTC → next-day 00:00 UTC exclusive bound).
-- `csvEscape`/`buildCsv`: commas/quotes/newlines escaped per RFC 4180.
-- `base64UrlToUint8`/`uint8ToStringUtf8`: `aGVsbG8` → `hello`.
-- `stripHtml`: `<br>`→newline, strips `<script>/<style>`, decodes entities.
-- `getNextAvailableName`: `a.pdf` → `a_2.pdf` → `a_3.pdf`.
-- `senderKey`: `Bob <bob@x.com>` → `bob@x.com`.
+Covered:
+  * `sanitizeFilename` strips bad chars, handles empty, keeps `.pdf` when cutting long names
+  * `buildGmailQuery` builds single sender, multi sender, and empty queries. End date is inclusive by adding one day
+  * `isDateInRange` keeps start day and end day
+  * `csvEscape` and `buildCsv` handle commas, quotes, new lines
+  * `base64UrlToUint8` decodes `aGVsbG8` to `hello`
+  * `stripHtml` keeps text, drops script and style
+  * `getNextAvailableName` makes `a.pdf`, `a_2.pdf`, `a_3.pdf`
+  * `senderKey` pulls `bob@x.com` from `Bob <bob@x.com>`
 
-## Static checks
+Static checks:
+  * `node --check` on `config.js` and all files in `js/`. All pass.
+  * `index.html` parses with Python `html.parser`.
+  * Local server serves `index.html`, all JS, CSS, manifest, icon with 200.
 
-- `node --check` on all JS: `config.js`, `js/utils.js`, `js/gmail.js`, `js/pdf.js`, `js/export.js`, `js/app.js` — all **OK**.
-- `index.html` parses with Python `html.parser` — **OK**.
-- All local `<script src>` / CSS targets exist; CDN scripts (GIS, JSZip 3.10.1, jsPDF 2.5.1 UMD) use pinned HTTPS URLs.
-- `python3 -m http.server` serves `index.html` (200), `js/app.js` (200), `styles.css` (200).
+Run it:
 
-## Manual flow (requires your own Google Client ID — cannot be automated in CI)
+```bash
+node --test tests/
+```
 
-1. `python3 -m http.server 8000` → open `http://localhost:8000` (Direct `file://` will fail by design: GIS + WebCrypto need http).
-2. Step 1: paste Client ID → Sign in with Google → account shown, status green.
-3. Step 2: enter `you@example.com`, dates, Max 100 → Search & preview → table fills, counts shown.
-4. Step 4: defaults → Build → 3 stages log to `export-log`, progress bars move, Cancel works.
-5. Step 5: Download ZIP → unzip → `master-archive.pdf` opens, `.eml` opens in Thunderbird, `manifest.csv` row count == preview count, `sha256sum -c checksums.sha256` passes.
-6. Disconnect network mid-export → errors shown, status **INCOMPLETE** (never claims success); re-run is safe.
+## Manual run on localhost
 
-## Known limits (documented in-app)
+This part needs your own Google Client ID. Actions cannot do it.
 
-- Gmail API list cap: Max messages setting (default 1000, hard cap 5000 per run). Larger mailboxes → run per-year ranges.
-- `master-archive.pdf` truncates any single message body at 60,000 chars (full text remains in `.eml`).
-- Image previews only for images < ~900 KB; video/audio never embedded (listed + saved separately or skipped per your choice).
-- WebCrypto SHA-256 needs a secure context (`https://` or `http://localhost`) — GitHub Pages qualifies.
+  1. In this folder run `python3 -m http.server 8000`
+  2. Open `http://localhost:8000` in Chrome. Do not double click the file.
+  3. Step 1: paste Client ID, press Sign in with Google. Your address should show.
+  4. Step 2: enter a sender and dates. Press Search and preview. Rows should show.
+  5. Step 4: leave defaults. Press Build my archive. The log should show download, then PDF, then ZIP.
+  6. Step 5: press Download ZIP. Unzip. Open the PDF. Open an `.eml` file. Check `manifest.csv` row count matches the preview. Run `sha256sum -c checksums.sha256`.
+  7. Turn off net mid export to test errors. The site should show INCOMPLETE, not complete.
+
+Tested here 2026-10-21:
+  * `python3 -m http.server` served all 14 files with 200
+  * `node --test tests/` gave 12 pass
+  * `node --check` gave pass on all JS files
+
+## Known limits
+
+  * Max messages setting defaults to 1000, max 5000 per run. For big mailboxes do one year at a time.
+  * One message body in the PDF is cut at 60000 chars. Full text stays in the `.eml`.
+  * Image previews only for images under about 900 KB. Video and audio are never put in the PDF. They are listed and saved next to it, or skipped if you pick skip.
+  * SHA check needs `https` or `http://localhost`. GitHub Pages is fine. Opening the file straight from disk is not fine.

@@ -1,49 +1,50 @@
-# User guide — Gmail Archive (no tech knowledge needed)
+# User guide. Gmail Archive
 
-## What this does
+## What this is for
 
-Saves emails from people you choose into one tidy download: a readable PDF plus the original files. Great for landlords, employers, legal records, or backups.
+It saves emails from people you pick into one tidy download. Good for records, landlords, work mail, or backup.
 
-## The 5 steps
+## The steps
 
 ### 1. Connect
-- Paste the Client ID if asked (the site owner gives you this), then **Sign in with Google**.
-- Google shows what the site can do: **read** emails only. It cannot send or delete.
+  * If the box asks for a Client ID, paste it. The site owner gives you this.
+  * Press Sign in with Google.
+  * Google will show what the site can do. It can read mail. It cannot send or delete mail.
 
 ### 2. Pick emails
-- Type sender address(es), e.g. `landlord@example.com`. One per line.
-- Pick start/end dates if you want (both inclusive), or leave blank for everything.
-- Press **Search & preview**.
+  * Type sender addresses. One per line. Example: `landlord@example.com`
+  * Pick start and end dates if you want. Both ends count. Leave blank for all dates.
+  * Press Search and preview.
 
 ### 3. Preview
-- Check the count and the first rows. If it says 0, check spelling or widen dates.
-- Note: if one message matches, its **whole conversation** (all replies) is included — the count can grow, which is correct.
+  * Look at the count and the first rows. If it says 0, check spelling or widen the dates.
+  * If one mail matches, the site pulls the full thread. That means all replies in that chat. The count can grow. That is normal.
 
-### 4. Customize (optional)
-- Leave defaults if unsure. They save originals + a PDF + attachments separately.
-- Videos/music: PDFs can’t play them, so they’re listed in the PDF and saved next to it (or skipped if you choose).
+### 4. Change options if you want
+  * Leave defaults if you are unsure. Defaults save originals plus a PDF plus attachments.
+  * Video and music cannot play inside a PDF. The PDF lists them. The files are saved next to the PDF in the ZIP. Or you can pick skip.
 
-### 5. Build & download
-- Press **Build my archive**, watch the progress (3 stages: download → PDF → ZIP).
-- Press **⬇ Download ZIP archive**. Also grab **PDF only** if you just want to read.
-- If it says **complete**, you’re done. If it says **INCOMPLETE**, press Build again — it’s safe to retry.
+### 5. Build and download
+  * Press Build my archive. Watch the three stages: download, then PDF, then ZIP.
+  * Press Download ZIP archive. Press Download PDF only if you just want to read.
+  * If it says complete, you are done. If it says INCOMPLETE, press Build again. It is safe to run again.
 
-## Opening your files
+## Open your files
 
-- `master-archive.pdf` — double-click, opens anywhere.
-- `.eml` files (in `emails/`) — open with Thunderbird (free), Apple Mail, or Outlook.
-- `manifest.csv` — opens in Excel / Google Sheets.
-- Attachments — open normally (photos, documents, videos).
+  * `master-archive.pdf` opens anywhere.
+  * `.eml` files in `emails/` open with Thunderbird, Apple Mail, or Outlook.
+  * `manifest.csv` opens in Excel or Google Sheets.
+  * Attachments open as normal.
 
-## Checking nothing is missing
+## Check nothing is missing
 
-- In the app: open **Verification** — all ticks should be ✓.
-- On a computer: unzip, then verify hashes (optional): `sha256sum -c checksums.sha256`.
-- Compare the preview count with `manifest.csv` rows.
+  * In the site open Verification. All lines should show a tick.
+  * On a computer you can unzip, then run `sha256sum -c checksums.sha256`.
+  * Compare the preview count with the rows in `manifest.csv`.
 
 ## Tips
 
-- Big mailbox? Do smaller date ranges (e.g. one year at a time).
-- Network dropped? Just run Build again.
-- Want a fresh start? **Start a new archive**.
-- Your history stays in this browser only; **Clear history** removes it.
+  * Big inbox. Do smaller date ranges. One year at a time works well.
+  * Net dropped. Just press Build again.
+  * Want a fresh start. Press Start a new archive.
+  * History stays in this browser only. Clear history removes it.

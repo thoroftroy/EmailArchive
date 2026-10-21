@@ -1,52 +1,51 @@
-# OAuth setup — get a Google Client ID (free, ~5 min)
+# OAuth setup. Get a Google Client ID
 
-The site uses the official Gmail API with OAuth 2.0. Google requires you to register the site once. No coding needed.
+You only do this once. It is free. It takes about five minutes.
 
-## 1. Create a Google Cloud project
+## 1. Make a project
 
-1. Go to <https://console.cloud.google.com/> and sign in.
-2. Top bar → project picker → **New Project** → name e.g. `gmail-archive` → Create.
+  1. Go to `https://console.cloud.google.com/` and sign in.
+  2. Top bar, project picker, New Project. Name it `gmail archive`. Press Create.
 
-## 2. Enable the Gmail API
+## 2. Turn on Gmail API
 
-1. Left menu → **APIs & Services → Library**.
-2. Search **Gmail API** → **Enable**.
+  1. Open APIs and Services, then Library.
+  2. Search for Gmail API. Press Enable.
 
-## 3. Configure the consent screen
+## 3. Fill in the consent screen
 
-1. **APIs & Services → OAuth consent screen** → User type **External** → Create.
-2. App name: `Gmail Archive`, support email: your Gmail. Save.
-3. **Scopes** → Add → filter `gmail.readonly` → check `https://www.googleapis.com/auth/gmail.readonly` → Save.
-   - This is read-only. The app cannot send/delete mail.
-4. **Test users** (while in Testing mode) → Add your Gmail address(es). Only these accounts can sign in until you Publish.
-5. Optionally **Publish** later to let anyone with a Google account use it (may trigger verification for sensitive scopes — for personal use, Testing + Test users is fine).
+  1. Open APIs and Services, then OAuth consent screen.
+  2. Pick External. Press Create.
+  3. App name: `Gmail Archive`. Support email: your Gmail. Press Save.
+  4. Under Scopes press Add. Filter for `gmail.readonly`. Tick `https://www.googleapis.com/auth/gmail.readonly`. Press Save. This is read only access.
+  5. Under Test users press Add users. Add your Gmail address. While the app is in Testing mode, only test users can sign in.
+  6. You can stay in Testing mode for personal use. You can Publish later if you want other people to use it.
 
-## 4. Create the Client ID
+## 4. Make the Client ID
 
-1. **APIs & Services → Credentials → Create Credentials → OAuth client ID**.
-2. Application type: **Web application**. Name: `gmail-archive-pages`.
-3. Under **Authorized JavaScript origins**, add BOTH:
-   - `https://YOUR-USERNAME.github.io`
-   - `http://localhost:8000`
-   - (Do NOT add paths — origins only. Add your custom domain too if you use one.)
-4. **Authorized redirect URIs**: leave empty (this app uses the token model, no redirects).
-5. Create → copy the **Client ID** (ends with `apps.googleusercontent.com`).
+  1. Open APIs and Services, then Credentials. Press Create Credentials, then OAuth client ID.
+  2. Application type: Web application. Name: `gmail archive pages`.
+  3. Under Authorized JavaScript origins add these two lines. Origins only, no extra path at the end:
+     * `https://YOURNAME.github.io`
+     * `http://localhost:8000`
+     Add your own domain too if you use one.
+  4. Leave Authorized redirect URIs empty. This site does not use redirects.
+  5. Press Create. Copy the Client ID. It ends with `apps.googleusercontent.com`.
 
-## 5. Put it in the site
+## 5. Use it in the site
 
-- Easiest: open the site → Step 1 → paste the Client ID (saved in that browser only), OR
-- Bake it in: edit `config.js` → replace `PASTE_YOUR_CLIENT_ID_HERE` → commit & push.
+Pick one:
+  * Open the site, go to Step 1, paste the Client ID in the box. It is saved in that browser only.
+  * Or open `config.js` in this folder, replace `PASTE_YOUR_CLIENT_ID_HERE`, save, commit, push.
 
-## Troubleshooting
+## If sign in fails
 
-| Error | Fix |
-|---|---|
-| `Error 400: redirect_uri_mismatch` | You added a redirect URI — remove it; only JavaScript origins matter. |
-| `Error 403: access_denied` / “Access blocked” | Add your Gmail as a Test user; check the `gmail.readonly` scope is added. |
-| Sign-in popup closes instantly | Allow popups for the site; disable ad-block for `accounts.google.com`; try Incognito. |
-| “Missing Client ID” | Paste it in Step 1 or `config.js`. |
-| Works on localhost but not Pages | Add `https://YOUR-USERNAME.github.io` to Authorized JavaScript origins (exact scheme + host). |
+  * Error `redirect_uri_mismatch`. You added something under redirect URIs. Remove it. Only Authorized JavaScript origins should have entries.
+  * Error `access_denied` or Access blocked. Add your Gmail under Test users. Check the `gmail.readonly` scope is added.
+  * Sign in popup closes at once. Allow popups for the site. Turn off ad block for `accounts.google.com`. Try an Incognito window.
+  * Message about missing Client ID. Paste it in Step 1 or in `config.js`.
+  * Works on localhost but not on Pages. Add `https://YOURNAME.github.io` to Authorized JavaScript origins. The start of the address has to match exactly.
 
-## Revoking access
+## Sign out
 
-Site → Sign out & revoke, or Google Account → Security → Third-party access → remove “Gmail Archive”. Tokens expire after ~1 hour anyway.
+Press Sign out in the site. Or open your Google Account, open Security, open Third party access, remove Gmail Archive. Tokens expire after about one hour in any case.

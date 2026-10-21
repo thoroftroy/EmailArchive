@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gmail Archive — Save email chains as PDF + originals</title>
-<meta name="description" content="Sign in with Google (read-only), pick senders and dates, and download a verified archive: master PDF, original .eml files, attachments, manifest and checksums. Everything stays in your browser.">
+<title>Gmail Archive. Save email chains as PDF plus originals</title>
+<meta name="description" content="Sign in with Google with read only access, pick senders and dates, and download a ZIP with a PDF, original eml files, attachments, and checks. Everything stays in your browser.">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="styles.css">
@@ -24,112 +24,116 @@
     <div class="logo"><img src="assets/icon.svg" alt="Gmail Archive logo"></div>
     <div>
       <h1>Gmail Archive</h1>
-      <p>Save Gmail conversations as a readable PDF + original files. No tech skills needed. Nothing is uploaded — everything runs in your browser.</p>
+      <p>Save Gmail chats as a PDF you can read plus the original files. Made for normal use. No tech skills needed. Nothing leaves your browser.</p>
     </div>
   </div>
 </header>
 
 <main>
-  <div class="stepper" aria-label="Progress">
-    <div class="step" data-step="1">1 · Connect</div>
-    <div class="step" data-step="2">2 · Pick emails</div>
-    <div class="step" data-step="3">3 · Preview</div>
-    <div class="step" data-step="4">4 · Customize</div>
-    <div class="step" data-step="5">5 · Export</div>
+  <div id="file-warn" class="card" hidden>
+    <h2>Open this site the right way</h2>
+    <p>You opened this file straight from disk. Google sign in will not work like that. Run a local server instead.</p>
+    <pre>python3 -m http.server 8000</pre>
+    <p>Then open <code>http://localhost:8000</code> in Chrome or Edge.</p>
   </div>
 
-  <!-- STEP 1 -->
+  <div class="stepper" aria-label="Progress">
+    <div class="step" data-step="1">1. Connect</div>
+    <div class="step" data-step="2">2. Pick emails</div>
+    <div class="step" data-step="3">3. Preview</div>
+    <div class="step" data-step="4">4. Options</div>
+    <div class="step" data-step="5">5. Export</div>
+  </div>
+
   <section class="card card-step" data-card-step="1">
-    <h2>Step 1 — Connect Gmail (read-only, safe)</h2>
-    <p>This site asks Google for <strong>read-only</strong> access to Gmail. It can <strong>download</strong> messages, but it <strong>cannot</strong> send, delete, or change anything. Your password is never asked for or stored.</p>
+    <h2>Step 1. Connect Gmail. Read only and safe</h2>
+    <p>This site asks Google for read only access to Gmail. It can download mail. It cannot send mail. It cannot delete mail. It cannot change anything. It never asks for your password.</p>
     <div class="perms">
-      <strong>What the app can do:</strong> list &amp; read emails and attachments you choose.<br>
-      <strong>What it cannot do:</strong> send mail, delete mail, change labels, or see your password.<br>
-      You can <strong>sign out / revoke</strong> access at any time (button below, or Google Account → Security → Third-party access).
+      <strong>It can do this:</strong> list and read mails you pick, with attachments.<br>
+      <strong>It cannot do this:</strong> send mail, delete mail, change labels, see your password.<br>
+      You can sign out and remove access at any time with the button below, or in your Google Account under Security.
     </div>
 
-    <label for="client-id">Google OAuth Client ID <span class="muted">(needed once — see “How to get a Client ID” below)</span></label>
-    <input type="text" id="client-id" placeholder="1234567890-abc…apps.googleusercontent.com" autocomplete="off">
-    <p class="small muted">Saved only in <em>this browser</em> (localStorage). Never sent anywhere except Google’s sign-in servers. If the site owner pre-filled it in <code>config.js</code>, you can leave this as-is.</p>
+    <label for="client-id">Google OAuth Client ID <span class="muted">(needed once. See How to get a Client ID below)</span></label>
+    <input type="text" id="client-id" placeholder="1234567890-abc...apps.googleusercontent.com" autocomplete="off">
+    <p class="small muted">Saved in this browser only. Never sent anywhere except to Google sign in servers. If the site owner put it in <code>config.js</code>, you can leave this alone.</p>
 
     <div id="connect-status" class="statusline"><span class="dot idle"></span> Not signed in.</div>
     <p id="account-line" class="small" hidden>Signed in as <strong id="account-email"></strong></p>
     <button class="btn" id="btn-signin">Sign in with Google</button>
-    <button class="btn secondary" id="btn-signout" hidden>Sign out &amp; revoke</button>
+    <button class="btn secondary" id="btn-signout" hidden>Sign out and remove access</button>
 
     <details id="setup-help">
-      <summary>How to get a Client ID (5 minutes, free — with pictures in OAUTH_SETUP.md)</summary>
+      <summary>How to get a Client ID. Five minutes. Free.</summary>
       <ol>
-        <li>Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a> → create a project (any name, e.g. “gmail-archive”).</li>
-        <li>APIs &amp; Services → Library → enable <strong>Gmail API</strong>.</li>
-        <li>APIs &amp; Services → OAuth consent screen → External → fill app name + your email → add scope <code>…/auth/gmail.readonly</code> → add yourself as a Test user.</li>
-        <li>Credentials → Create Credentials → <strong>OAuth client ID</strong> → Application type <strong>Web application</strong>.</li>
-        <li>Under <strong>Authorized JavaScript origins</strong> add:
+        <li>Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a>. Make a project. Any name will do, like <code>gmail archive</code>.</li>
+        <li>Open APIs and Services, then Library. Turn on <strong>Gmail API</strong>.</li>
+        <li>Open OAuth consent screen. Pick External. Fill app name and your email. Add the scope <code>gmail.readonly</code>. Add yourself under Test users.</li>
+        <li>Open Credentials. Create Credentials, then OAuth client ID. Type is Web application.</li>
+        <li>Under Authorized JavaScript origins add:
           <ul>
-            <li><code>https://YOUR-USERNAME.github.io</code></li>
-            <li><code>http://localhost:8000</code> (for local testing)</li>
+            <li><code>https://YOURNAME.github.io</code></li>
+            <li><code>http://localhost:8000</code></li>
           </ul>
         </li>
-        <li>Copy the Client ID (looks like <code>…apps.googleusercontent.com</code>) and paste it above. Full guide: <code>OAUTH_SETUP.md</code>.</li>
+        <li>Copy the Client ID. It ends with <code>apps.googleusercontent.com</code>. Paste it above. Full steps are in <code>OAUTH_SETUP.md</code> in the repo.</li>
       </ol>
-      <p class="small muted">Seeing “Access blocked / Error 403: access_denied”? Add your Gmail address as a Test user on the consent screen, or publish the app.</p>
+      <p class="small muted">Seeing Access blocked or Error 403. Add your Gmail as a Test user on the consent screen, or publish the app.</p>
     </details>
 
     <details>
-      <summary>Privacy in plain English</summary>
-      <p>Your emails are fetched from Google straight into this page and packed into a ZIP you download. There is <strong>no server</strong>: this is a static GitHub Pages site. No analytics, no uploads. Signing out discards the access token from this browser. The token is never written to logs.</p>
+      <summary>Privacy in plain words</summary>
+      <p>Your mails come from Google straight into this page. They are packed into a ZIP you download. There is no server. No stats. No uploads. Sign out clears the token from this browser. The token is never written to logs.</p>
     </details>
 
     <div class="navrow">
-      <button class="btn secondary" data-goto="2">Continue → Pick emails</button>
+      <button class="btn secondary" data-goto="2">Next. Pick emails</button>
     </div>
   </section>
 
-  <!-- STEP 2 -->
   <section class="card card-step" data-card-step="2" hidden>
-    <h2>Step 2 — Pick which emails to archive</h2>
-    <p class="muted">Type one or more sender addresses, optionally narrow by date, then preview. Matching is done with Gmail search <em>plus</em> a careful date check, and <strong>whole conversation threads are included</strong> (replies from everyone) so nothing is missing.</p>
+    <h2>Step 2. Pick which mails to save</h2>
+    <p class="muted">Type one or more sender addresses. Add dates if you want. Then preview. If one mail matches, the full thread comes with it, with all replies. So nothing is missing.</p>
 
-    <label for="senders">Sender email address(es) <span class="muted">(one per line, or comma-separated — leave blank for “everyone”)</span></label>
+    <label for="senders">Sender addresses <span class="muted">(one per line, or split with commas. Leave blank for everyone)</span></label>
     <textarea id="senders" rows="3" placeholder="landlord@example.com&#10;boss@company.com"></textarea>
     <button class="btn ghost" id="btn-sample" type="button">Fill a sample</button>
 
     <div class="row">
       <div>
-        <label for="start-date">Start date (inclusive)</label>
+        <label for="start-date">Start date. Counts from this day.</label>
         <input type="date" id="start-date">
       </div>
       <div>
-        <label for="end-date">End date (inclusive)</label>
+        <label for="end-date">End date. Counts through this day.</label>
         <input type="date" id="end-date">
       </div>
       <div>
-        <label for="max-messages">Max messages to fetch</label>
+        <label for="max-messages">Max mails to fetch</label>
         <input type="number" id="max-messages" value="1000" min="50" max="5000" step="50">
       </div>
     </div>
 
     <details>
-      <summary>Exactly how date filtering works</summary>
+      <summary>How dates work</summary>
       <ul>
-        <li><strong>Start date</strong> means “from 00:00 UTC on that day onwards”.</li>
-        <li><strong>End date</strong> means “through the whole day, up to 23:59 UTC” (Gmail’s <code>before:</code> is exclusive, so the app searches <code>before:&lt;end+1 day&gt;</code> and double-checks each message).</li>
-        <li><strong>Threads:</strong> if <em>any</em> message matches, the <em>entire thread</em> (every reply, from every participant) is included and sorted oldest → newest. That is why the final count can be bigger than the “matching” count.</li>
+        <li><strong>Start date</strong> means from 00:00 UTC on that day.</li>
+        <li><strong>End date</strong> means through the full day to 23:59 UTC. Gmail treats end dates as not included, so the app adds one day to the search and checks each mail again.</li>
+        <li><strong>Threads.</strong> If any mail in a thread matches, the full thread is saved. All replies from all people. Sorted oldest first. So the last count can be larger than the match count.</li>
       </ul>
     </details>
 
     <div class="navrow">
-      <button class="btn ghost" data-goto="1">← Back</button>
-      <button class="btn" id="btn-preview">Search &amp; preview →</button>
+      <button class="btn ghost" data-goto="1">Back</button>
+      <button class="btn" id="btn-preview">Search and preview</button>
     </div>
   </section>
 
-  <!-- STEP 3 -->
   <section class="card card-step" data-card-step="3" hidden>
-    <h2>Step 3 — Preview what will be archived</h2>
+    <h2>Step 3. Look before you save</h2>
     <pre class="query" id="query-echo">Run a search first.</pre>
     <p id="preview-summary" class="muted"></p>
-    <div id="preview-empty" class="muted">Click “Search &amp; preview” on the previous step, or press below.</div>
+    <div id="preview-empty" class="muted">Press Search and preview on the last step, or press below.</div>
     <div class="tablewrap" id="preview-table-wrap" hidden>
       <table>
         <thead><tr><th>#</th><th>Date</th><th>From</th><th>Subject</th></tr></thead>
@@ -139,69 +143,67 @@
     <p class="small muted" id="preview-more"></p>
     <div id="progress-wrap" hidden>
       <div id="progress-track"><div id="progress-bar"></div></div>
-      <div id="progress-label">Working…</div>
+      <div id="progress-label">Working.</div>
     </div>
     <div class="navrow">
-      <button class="btn ghost" data-goto="2">← Adjust search</button>
+      <button class="btn ghost" data-goto="2">Change search</button>
       <button class="btn secondary" id="btn-cancel-preview">Cancel</button>
-      <button class="btn" id="btn-to-customize" disabled>Continue → Customize</button>
+      <button class="btn" id="btn-to-customize" disabled>Next. Options</button>
     </div>
   </section>
 
-  <!-- STEP 4 -->
   <section class="card card-step" data-card-step="4" hidden>
-    <h2>Step 4 — Customize your download</h2>
-    <p class="muted">Everything is optional. Defaults are sensible for most people: originals + readable PDF + attachments saved separately.</p>
+    <h2>Step 4. Options</h2>
+    <p class="muted">All of this is optional. Defaults are fine for most people. Originals plus a PDF you can read plus attachments saved on the side.</p>
 
-    <label for="opt-title">Archive title (used on the PDF cover)</label>
+    <label for="opt-title">Archive title. Used on the PDF cover.</label>
     <input type="text" id="opt-title" value="Gmail Archive">
 
-    <label class="checkline"><input type="checkbox" id="opt-eml" checked> <span><strong>Include original .eml files</strong> — the exact original message for each email. Open with Thunderbird / Apple Mail / Outlook. <span class="muted">(Recommended ON.)</span></span></label>
-    <label class="checkline"><input type="checkbox" id="opt-attachments" checked> <span><strong>Include attachments in original formats</strong> — saved separately in the ZIP with original filenames. Duplicates are renamed safely (<code>photo_2.jpg</code>).</span></label>
+    <label class="checkline"><input type="checkbox" id="opt-eml" checked> <span><strong>Save original eml files.</strong> The exact mail for each message. Opens in Thunderbird, Apple Mail, Outlook. <span class="muted">(Keep this on.)</span></span></label>
+    <label class="checkline"><input type="checkbox" id="opt-attachments" checked> <span><strong>Save attachments as normal files.</strong> Kept in the ZIP with normal file names. Copies are renamed safely, like <code>photo_2.jpg</code>.</span></label>
 
     <div class="row">
       <div>
-        <label for="opt-video">Video attachments (mp4, mov, …)</label>
+        <label for="opt-video">Video files like mp4 and mov</label>
         <select id="opt-video">
-          <option value="include" selected>Download separately in ZIP + note in PDF (recommended)</option>
-          <option value="skip">Skip videos (list in PDF only)</option>
+          <option value="include" selected>Save in ZIP and note in PDF. Best choice.</option>
+          <option value="skip">Skip videos. List in PDF only.</option>
         </select>
-        <p class="small muted">Videos are never embedded in the PDF (it would become huge). The PDF shows a placeholder with the filename.</p>
+        <p class="small muted">Videos are never stuck in the PDF. The PDF would get huge. The PDF shows the file name instead.</p>
       </div>
       <div>
-        <label for="opt-audio">Audio attachments (mp3, wav, …)</label>
+        <label for="opt-audio">Audio files like mp3 and wav</label>
         <select id="opt-audio">
-          <option value="include" selected>Download separately in ZIP + note in PDF (recommended)</option>
-          <option value="skip">Skip audio (list in PDF only)</option>
+          <option value="include" selected>Save in ZIP and note in PDF. Best choice.</option>
+          <option value="skip">Skip audio. List in PDF only.</option>
         </select>
       </div>
     </div>
 
-    <label class="checkline"><input type="checkbox" id="opt-imgpreview" checked> <span><strong>Small image previews in the PDF</strong> — thumbnails for photos (originals still saved separately).</span></label>
+    <label class="checkline"><input type="checkbox" id="opt-imgpreview" checked> <span><strong>Small image previews in the PDF.</strong> Thumbnails for photos. Originals are still saved on the side.</span></label>
 
     <details>
-      <summary>What you’ll get in the ZIP</summary>
+      <summary>What you get in the ZIP</summary>
       <ul>
-        <li><code>master-archive.pdf</code> — one big readable document: cover, contents, every message with headers + body, attachment notes.</li>
-        <li><code>emails/&lt;sender&gt;/&lt;conversation&gt;/*.eml</code> — originals.</li>
-        <li><code>attachments/&lt;sender&gt;/*</code> — originals in original formats.</li>
-        <li><code>manifest.csv</code> — spreadsheet: message IDs, dates, subjects, filenames, status.</li>
-        <li><code>checksums.sha256</code> — hashes to verify nothing changed (<code>sha256sum -c checksums.sha256</code>).</li>
-        <li><code>export.log</code>, <code>errors.json</code>, <code>README.txt</code> — what happened, what failed.</li>
+        <li><code>master-archive.pdf</code>. One file you can read. Cover, list of mails, each mail with headers and text, notes for attachments.</li>
+        <li><code>emails/</code>. Originals, sorted by sender and chat.</li>
+        <li><code>attachments/</code>. Original files.</li>
+        <li><code>manifest.csv</code>. Sheet with IDs, dates, subjects, file names, state.</li>
+        <li><code>checksums.sha256</code>. Hashes to check nothing changed. Run <code>sha256sum -c checksums.sha256</code>.</li>
+        <li><code>export.log</code>, <code>errors.json</code>, <code>README.txt</code>. What ran, what failed.</li>
       </ul>
-      <p class="small muted">If anything fails, the app says <strong>INCOMPLETE</strong> — it never claims success when files are missing. Re-running is safe (it re-downloads; it never touches Gmail).</p>
+      <p class="small muted">If anything fails, the app says INCOMPLETE. It will not say done when files are missing. You can run it again. It only reads from Gmail. It never changes Gmail.</p>
     </details>
 
     <div class="navrow">
-      <button class="btn ghost" data-goto="3">← Back to preview</button>
-      <button class="btn" id="btn-export">Build my archive →</button>
+      <button class="btn ghost" data-goto="3">Back to preview</button>
+      <button class="btn" id="btn-export">Build my archive</button>
     </div>
   </section>
 
-  <!-- STEP 5 -->
   <section class="card card-step" data-card-step="5" hidden>
-    <h2>Step 5 — Building &amp; downloading</h2>
-    <p><strong id="export-step">Waiting…</strong></p>
+    <h2>Step 5. Build and download</h2>
+    <p><strong id="export-step">Waiting.</strong></p>
     <div id="export-progress-wrap" hidden>
       <div class="progress-track"><div id="export-progress-bar"></div></div>
       <div id="export-progress-label" class="small muted">Ready.</div>
@@ -215,56 +217,60 @@
       <h3 id="done-title">Done</h3>
       <div id="done-summary"></div>
       <div class="navrow">
-        <button class="btn" id="btn-download-zip" hidden>⬇ Download ZIP archive</button>
-        <button class="btn secondary" id="btn-download-pdf" hidden>⬇ Download PDF only</button>
+        <button class="btn" id="btn-download-zip" hidden>Download ZIP archive</button>
+        <button class="btn secondary" id="btn-download-pdf" hidden>Download PDF only</button>
       </div>
       <details id="verify-box">
-        <summary>Verification — is my archive good?</summary>
+        <summary>Check. Is my archive good.</summary>
         <ul id="verify-list"></ul>
-        <p class="small muted">To verify on a computer: unzip, then run <code>sha256sum -c checksums.sha256</code> (Linux/Mac) or use 7-Zip’s checksum tool (Windows). Any “FAILED” line means that file changed since export. Also compare <code>manifest.csv</code> row count with the preview count.</p>
-        <button class="btn ghost" id="btn-verify" type="button">Re-run checks</button>
+        <p class="small muted">To check on a computer, unzip, then run <code>sha256sum -c checksums.sha256</code> on Linux or Mac, or use the 7 Zip check tool on Windows. Any FAILED line means that file changed since export. Also compare <code>manifest.csv</code> row count with the preview count.</p>
+        <button class="btn ghost" id="btn-verify" type="button">Run checks again</button>
       </details>
     </div>
 
     <div class="navrow">
-      <button class="btn ghost" data-goto="4">← Change options</button>
+      <button class="btn ghost" data-goto="4">Change options</button>
       <button class="btn secondary" data-goto="2">Start a new archive</button>
     </div>
   </section>
 
   <section class="card">
-    <h2>Archive history (this browser only)</h2>
+    <h2>Past runs on this computer</h2>
+    <p class="small muted">Kept in this browser only.</p>
     <ul id="history-list" class="small"></ul>
     <button class="btn ghost" id="btn-clear-history" type="button">Clear history</button>
   </section>
 
   <section class="card">
-    <h2>Help &amp; troubleshooting</h2>
+    <h2>Help</h2>
     <details open>
-      <summary>I’m not technical. What do I do?</summary>
+      <summary>I am not technical. What do I press.</summary>
       <ol>
-        <li>Step 1: paste your Client ID (ask the site owner, or follow “How to get a Client ID”) → <strong>Sign in with Google</strong>.</li>
-        <li>Step 2: type the sender address(es), pick dates, press <strong>Search &amp; preview</strong>.</li>
-        <li>Step 3: check the list looks right → Continue.</li>
-        <li>Step 4: leave defaults → <strong>Build my archive</strong>.</li>
-        <li>Step 5: press <strong>Download ZIP</strong>. Open the PDF with any reader; open <code>.eml</code> files with your mail app.</li>
+        <li>Step 1. Paste your Client ID if asked. Then press Sign in with Google.</li>
+        <li>Step 2. Type the sender address. Pick dates. Press Search and preview.</li>
+        <li>Step 3. Check the list looks right. Press Next.</li>
+        <li>Step 4. Leave defaults. Press Build my archive.</li>
+        <li>Step 5. Press Download ZIP. Open the PDF to read. Open <code>.eml</code> files with your mail app.</li>
       </ol>
     </details>
-    <details><summary>“Access blocked”, 403, or sign-in loops</summary>
-      <p>Your Google Cloud OAuth consent screen is in <strong>Testing</strong> mode and your address isn’t a Test user, or the JavaScript origin is missing. Add your Gmail as a Test user and add <code>https://YOUR-USERNAME.github.io</code> to Authorized JavaScript origins. Then try an Incognito window.</p>
+    <details><summary>Access blocked or 403 or sign in loops</summary>
+      <p>Your Google Cloud consent screen is in Testing mode and your address is not a Test user, or the JavaScript origin is missing. Add your Gmail as a Test user and add <code>https://YOURNAME.github.io</code> to Authorized JavaScript origins. Then try an Incognito window.</p>
     </details>
-    <details><summary>The app says INCOMPLETE / some files failed</summary>
-      <p>Usually a network hiccup or Gmail rate limit. Press <strong>Build my archive</strong> again (safe — it re-downloads). Big mailboxes: lower “Max messages” and run several smaller date ranges.</p>
+    <details><summary>The app says INCOMPLETE</summary>
+      <p>Most times this is a short net cut or Gmail rate limit. Press Build my archive again. It is safe. It reads again. For big mail boxes, lower Max mails and run smaller date ranges.</p>
     </details>
-    <details><summary>Where do my files go?</summary>
-      <p>Into the ZIP you download — typically your <code>Downloads</code> folder. Nothing stays on any server. ZIP layout is documented in Step 4.</p>
+    <details><summary>Where do my files go</summary>
+      <p>Into the ZIP you download. Most times it lands in your <code>Downloads</code> folder. Nothing stays on a server. The ZIP layout is listed in Step 4.</p>
+    </details>
+    <details><summary>The GitHub Pages site shows 404</summary>
+      <p>Make the repo public. Free GitHub accounts cannot host Pages sites from private repos. Then in Settings open Pages and pick Source GitHub Actions. Wait for the Actions run to turn green. Then reload the site address.</p>
     </details>
   </section>
 </main>
 
 <footer>
-  <p>© <span id="year"></span> Gmail Archive · Static site — no server, no uploads. PDFs are reading copies; <code>.eml</code> files are originals. Checksums detect changes, not authenticity.</p>
-  <p class="small">Docs: <a href="README.md">README</a> · <a href="OAUTH_SETUP.md">OAuth setup</a> · <a href="USER_GUIDE.md">User guide</a></p>
+  <p><span id="year"></span> Gmail Archive. Static site. No server. No uploads. The PDF is for reading. The <code>.eml</code> files are the originals. Checksums show change, not proof of sender.</p>
+  <p class="small">Docs live in this repo: README, OAUTH_SETUP, USER_GUIDE, TEST_REPORT.</p>
 </footer>
 
 <div class="toast" id="toast" role="status"></div>

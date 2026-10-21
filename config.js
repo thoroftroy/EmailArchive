@@ -1,4 +1,4 @@
-/* Gmail Archive — public configuration.
+/* Gmail Archive. Public configuration.
  * This file is served on GitHub Pages, so NEVER put secrets here.
  * Set your Google OAuth Client ID in one of these ways (first non-empty wins):
  *   1. Type it in the website's "Connect" step (saved in this browser only).
@@ -8,7 +8,7 @@
 window.ARCHIVE_CONFIG = {
   CLIENT_ID: "PASTE_YOUR_CLIENT_ID_HERE",
 
-  // Read-only Gmail scope. Do not change unless you know what you are doing.
+  // Read only Gmail scope. Do not change unless you know what you are doing.
   SCOPES: "https://www.googleapis.com/auth/gmail.readonly",
 
   APP_NAME: "Gmail Archive",
