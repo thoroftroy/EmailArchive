@@ -85,8 +85,7 @@
  async function doSignIn() {
   const cid = $("client-id").value.trim() || (window.ARCHIVE_CONFIG && window.ARCHIVE_CONFIG.CLIENT_ID) || "";
   if (!cid || cid === "PASTE_YOUR_CLIENT_ID_HERE") {
-   toast("Paste your Google OAuth Client ID first. See “How to get a Client ID”.", "err");
-   $("setup-help").open = true;
+   toast("Paste the sign in code first.", "err");
    return;
   }
   try {
@@ -587,6 +586,13 @@
   state.gmail = new window.GmailClient();
   const savedCid = safeGet("ga_client_id") || ((window.ARCHIVE_CONFIG && window.ARCHIVE_CONFIG.CLIENT_ID) || "");
   if (savedCid && savedCid !== "PASTE_YOUR_CLIENT_ID_HERE") $("client-id").value = savedCid;
+  try {
+   const baked = (window.ARCHIVE_CONFIG && window.ARCHIVE_CONFIG.CLIENT_ID) || "";
+   if (baked && baked !== "PASTE_YOUR_CLIENT_ID_HERE") {
+    const wrap = $("client-id-wrap");
+    if (wrap) wrap.hidden = true;
+   }
+  } catch (e) {}
 
   $("btn-signin").addEventListener("click", doSignIn);
   $("btn-signout").addEventListener("click", doSignOut);

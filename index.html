@@ -54,32 +54,16 @@
       You can sign out and remove access at any time with the button below, or in your Google Account under Security.
     </div>
 
-    <label for="client-id">Google OAuth Client ID <span class="muted">(needed once. See How to get a Client ID below)</span></label>
-    <input type="text" id="client-id" placeholder="1234567890-abc...apps.googleusercontent.com" autocomplete="off">
-    <p class="small muted">Saved in this browser only. Never sent anywhere except to Google sign in servers. If the site owner put it in <code>config.js</code>, you can leave this alone.</p>
+    <div id="client-id-wrap">
+      <label for="client-id">Sign in code <span class="muted">(only needed once)</span></label>
+      <input type="text" id="client-id" placeholder="Paste the code here" autocomplete="off">
+      <p class="small muted">Saved in this browser only. Never sent anywhere except to Google sign in servers. If this box is already filled, leave it alone.</p>
+    </div>
 
     <div id="connect-status" class="statusline"><span class="dot idle"></span> Not signed in.</div>
     <p id="account-line" class="small" hidden>Signed in as <strong id="account-email"></strong></p>
     <button class="btn" id="btn-signin">Sign in with Google</button>
     <button class="btn secondary" id="btn-signout" hidden>Sign out and remove access</button>
-
-    <details id="setup-help">
-      <summary>How to get a Client ID. Five minutes. Free.</summary>
-      <ol>
-        <li>Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a>. Make a project. Any name will do, like <code>gmail archive</code>.</li>
-        <li>Open APIs and Services, then Library. Turn on <strong>Gmail API</strong>.</li>
-        <li>Open OAuth consent screen. Pick External. Fill app name and your email. Add the scope <code>gmail.readonly</code>. Add yourself under Test users.</li>
-        <li>Open Credentials. Create Credentials, then OAuth client ID. Type is Web application.</li>
-        <li>Under Authorized JavaScript origins add:
-          <ul>
-            <li><code>https://YOURNAME.github.io</code></li>
-            <li><code>http://localhost:8000</code></li>
-          </ul>
-        </li>
-        <li>Copy the Client ID. It ends with <code>apps.googleusercontent.com</code>. Paste it above. Full steps are in <code>OAUTH_SETUP.md</code> in the repo.</li>
-      </ol>
-      <p class="small muted">Seeing Access blocked or Error 403. Add your Gmail as a Test user on the consent screen, or publish the app.</p>
-    </details>
 
     <details>
       <summary>Privacy in plain words</summary>
@@ -246,7 +230,7 @@
     <details open>
       <summary>I am not technical. What do I press.</summary>
       <ol>
-        <li>Step 1. Paste your Client ID if asked. Then press Sign in with Google.</li>
+        <li>Step 1. Paste your sign in code if asked. Then press Sign in with Google.</li>
         <li>Step 2. Type the sender address. Pick dates. Press Search and preview.</li>
         <li>Step 3. Check the list looks right. Press Next.</li>
         <li>Step 4. Leave defaults. Press Build my archive.</li>
@@ -254,7 +238,7 @@
       </ol>
     </details>
     <details><summary>Access blocked or 403 or sign in loops</summary>
-      <p>Your Google Cloud consent screen is in Testing mode and your address is not a Test user, or the JavaScript origin is missing. Add your Gmail as a Test user and add <code>https://YOURNAME.github.io</code> to Authorized JavaScript origins. Then try an Incognito window.</p>
+      <p>Allow popups for this site and try an Incognito window in Firefox. Make sure you pick the Gmail you want to archive. Check the code in the Step 1 box for extra spaces.</p>
     </details>
     <details><summary>The app says INCOMPLETE</summary>
       <p>Most times this is a short net cut or Gmail rate limit. Press Build my archive again. It is safe. It reads again. For big mail boxes, lower Max mails and run smaller date ranges.</p>
@@ -262,15 +246,11 @@
     <details><summary>Where do my files go</summary>
       <p>Into the ZIP you download. Most times it lands in your <code>Downloads</code> folder. Nothing stays on a server. The ZIP layout is listed in Step 4.</p>
     </details>
-    <details><summary>The GitHub Pages site shows 404</summary>
-      <p>Make the repo public. Free GitHub accounts cannot host Pages sites from private repos. Then in Settings open Pages and pick Source GitHub Actions. Wait for the Actions run to turn green. Then reload the site address.</p>
-    </details>
   </section>
 </main>
 
 <footer>
-  <p><span id="year"></span> Gmail Archive. Static site. No server. No uploads. The PDF is for reading. The <code>.eml</code> files are the originals. Checksums show change, not proof of sender.</p>
-  <p class="small">Docs live in this repo: README, OAUTH_SETUP, USER_GUIDE, TEST_REPORT.</p>
+  <p><span id="year"></span> Gmail Archive. The PDF is for reading. The <code>.eml</code> files are the originals.</p>
 </footer>
 
 <div class="toast" id="toast" role="status"></div>
