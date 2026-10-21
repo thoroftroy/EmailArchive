@@ -717,6 +717,7 @@
   $("btn-sample").addEventListener("click", () => {
    $("senders").value = "example@gmail.com";
    toast("Sample sender filled in. Replace it with the real address.");
+  });
   const sendBtn = $("btn-send-request");
   if (sendBtn) sendBtn.addEventListener("click", sendAccessRequest);
   const redirBtn = $("btn-signin-redirect");
@@ -725,7 +726,6 @@
    catch (e) { toast("Sign-in failed: " + ((e && e.message) || e), "err"); }
   });
   maybeFinishRedirect();
-  });
 
   refreshConnectUI();
   renderHistory();
