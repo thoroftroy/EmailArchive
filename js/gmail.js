@@ -74,7 +74,15 @@
         reject(new Error("Google sign-in was cancelled or failed. No access token returned."));
        }
       },
-      error_callback: (err) => reject(new Error("Google sign-in error: " + (err && (err.message || err.type) || "unknown"))),
+      error_callback: (err) => {
+       let detail = "unknown";
+       try {
+        if (err && err.message) detail = String(err.message);
+        else if (err && err.type) detail = "[" + String(err.type) + "] " + JSON.stringify(err).slice(0, 300);
+        else detail = JSON.stringify(err).slice(0, 300);
+       } catch (e2) { detail = String((err && (err.message || err.type)) || "unknown"); }
+       reject(new Error("Google sign-in error: " + detail));
+      },
      });
      self.tokenClient.requestAccessToken({ prompt: "consent" });
     } catch (e) {

@@ -126,6 +126,7 @@
    clearSigninTimer();
    console.error(e);
    const msg = String((e && e.message) || e);
+   state.lastSigninError = msg;
    if (msg.indexOf("access_denied") >= 0 || msg.indexOf("403") >= 0 || msg.toLowerCase().indexOf("blocked") >= 0) {
     toast("Sign in blocked. Only selected users can sign in. Use Send request in Step 1. Type your Gmail and press Send.", "err");
    } else if (/popup|closed|dismiss/i.test(msg)) {
@@ -639,14 +640,15 @@
     toast("Request sent.");
     if (input) input.value = "";
    } catch (e) {
-    say("Could not send here. Email rednave.riddle@gmail.com from your Gmail instead and include: " + email);
+    const why = String((e && e.message) || e);
+   say("Send failed: " + why + ". If it mentions activation, open rednave.riddle@gmail.com and click the activate link, then try again. Or email rednave.riddle@gmail.com from your Gmail and include: " + email);
     toast("Send failed here. Email rednave.riddle@gmail.com instead.", "err");
    } finally {
     if (btn) btn.disabled = false;
    }
   }
 
-  var APP_BUILD = "2026-10-22c";
+  var APP_BUILD = "2026-10-22d";
 
   function updateDebugInfo() {
    const el = $("debug-info");
@@ -660,6 +662,7 @@
    } catch (e) { cid = "(error)"; }
    el.textContent =
     "Build: " + APP_BUILD + "\n" +
+    "Last sign in error: " + (state.lastSigninError || "(none yet)") + "\n" +
     "Page address: " + String(location.href) + "\n" +
     "Google library loaded: " + gis + "\n" +
     "Sign in code starts: " + cid + "\n" +
@@ -725,6 +728,7 @@
   try { res = state.gmail.parseRedirectHash(); }
   catch (e) { toast("Sign in return data was invalid. Please try again.", "err"); return; }
   if (!res) return;
+  state.lastSigninError = String(res.errorDesc || res.error);
   if (res.error) {
    if (/access_denied/i.test(String(res.error))) toast("Sign in blocked. Only selected users can sign in. Use Send request in Step 1. Type your Gmail and press Send.", "err");
    else toast("Sign in failed: " + (res.errorDesc || res.error), "err");
