@@ -98,7 +98,12 @@
    saveHistoryEvent("signin", {});
   } catch (e) {
    console.error(e);
-   toast("Sign-in failed: " + (e.message || e), "err");
+   const msg = String((e && e.message) || e);
+   if (msg.indexOf("access_denied") >= 0 || msg.indexOf("403") >= 0 || msg.toLowerCase().indexOf("blocked") >= 0) {
+    toast("Sign in blocked. Only selected users can sign in. Use Request access by email in Step 1 to send your Gmail to rednave.riddle@gmail.com.", "err");
+   } else {
+    toast("Sign in failed: " + msg, "err");
+   }
   }
  }
 
