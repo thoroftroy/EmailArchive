@@ -584,8 +584,12 @@
    if (w) w.hidden = false;
   }
   state.gmail = new window.GmailClient();
-  const savedCid = safeGet("ga_client_id") || ((window.ARCHIVE_CONFIG && window.ARCHIVE_CONFIG.CLIENT_ID) || "");
-  if (savedCid && savedCid !== "PASTE_YOUR_CLIENT_ID_HERE") $("client-id").value = savedCid;
+  const bakedId = ((window.ARCHIVE_CONFIG && window.ARCHIVE_CONFIG.CLIENT_ID) || "").trim();
+  const realBaked = (bakedId && bakedId !== "PASTE_YOUR_CLIENT_ID_HERE") ? bakedId : "";
+  const storedId = safeGet("ga_client_id") || "";
+  const useId = realBaked || storedId;
+  if (realBaked && storedId && storedId !== realBaked) safeSet("ga_client_id", realBaked);
+  if (useId) $("client-id").value = useId;
   try {
    const baked = (window.ARCHIVE_CONFIG && window.ARCHIVE_CONFIG.CLIENT_ID) || "";
    if (baked && baked !== "PASTE_YOUR_CLIENT_ID_HERE") {

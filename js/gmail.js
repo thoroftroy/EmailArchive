@@ -20,7 +20,7 @@
    const clean = (v) => (v && v !== "PASTE_YOUR_CLIENT_ID_HERE" ? String(v).trim() : "");
    let saved = "";
    try { saved = localStorage.getItem("ga_client_id") || ""; } catch (e) { saved = ""; }
-   return clean(this.clientId) || clean(saved) || clean(fromConfig);
+   return clean(this.clientId) || clean(fromConfig) || clean(saved);
   }
 
   setClientId(id) {
