@@ -84,7 +84,7 @@
        reject(new Error("Google sign-in error: " + detail));
       },
      });
-     self.tokenClient.requestAccessToken({ prompt: "consent" });
+     self.tokenClient.requestAccessToken();
     } catch (e) {
      reject(e);
     }
@@ -147,7 +147,7 @@
     error_callback: function () {}
    });
    this.setClientId(cid);
-   this.tokenClient.requestAccessToken({ prompt: "consent" });
+   this.tokenClient.requestAccessToken();
   }
 
   signOut() {

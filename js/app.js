@@ -648,7 +648,7 @@
    }
   }
 
-  var APP_BUILD = "2026-10-22d";
+  var APP_BUILD = "2026-10-22e";
 
   function updateDebugInfo() {
    const el = $("debug-info");
