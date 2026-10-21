@@ -616,7 +616,7 @@
    const btn = $("btn-send-request");
    const say = (s) => { if (status) status.textContent = s; };
    const email = ((input && input.value) || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
-   if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) {
+   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     say("Type your full Gmail first, like you@gmail.com.");
     toast("Type your full Gmail first.", "err");
     return;
@@ -646,7 +646,7 @@
    }
   }
 
-  var APP_BUILD = "2026-10-22b";
+  var APP_BUILD = "2026-10-22c";
 
   function updateDebugInfo() {
    const el = $("debug-info");
@@ -744,11 +744,17 @@
   if (sendBtn) sendBtn.addEventListener("click", sendAccessRequest);
   const redirBtn = $("btn-signin-redirect");
   if (redirBtn) redirBtn.addEventListener("click", () => {
-   try { state.gmail.requestAccessTokenRedirect(); }
-   catch (e) { toast("Sign-in failed: " + ((e && e.message) || e), "err"); }
+   let r = null;
+   try { r = state.gmail.requestAccessTokenRedirect(); }
+   catch (e) { toast("Sign-in failed: " + ((e && e.message) || e), "err"); return; }
+   if (r && typeof r.catch === "function") r.catch((e) => {
+    toast("Redirect sign in failed: " + ((e && e.message) || e), "err");
+   });
   });
   maybeFinishRedirect();
 
+  const dbgBox = $("debug-box");
+  if (dbgBox) dbgBox.addEventListener("toggle", () => { if (dbgBox.open) updateDebugInfo(); });
   const copyBtn = $("btn-copy-debug");
   if (copyBtn) copyBtn.addEventListener("click", () => {
    updateDebugInfo();

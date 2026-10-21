@@ -37,26 +37,38 @@
    return false;
   }
 
-  requestAccessToken(clientId) {
+  async waitForGis(timeoutMs) {
+   const waitMs = (typeof timeoutMs === "number" && timeoutMs > 0) ? timeoutMs : 8000;
+   const start = Date.now();
+   while (Date.now() - start < waitMs) {
+    if (this.ensureGisLoaded()) return true;
+    await new Promise((r) => setTimeout(r, 400));
+   }
+   return this.ensureGisLoaded();
+  }
+
+  async requestAccessToken(clientId) {
    const cid = String(clientId || this.configuredClientId()).trim();
    if (!cid || cid === "PASTE_YOUR_CLIENT_ID_HERE") {
     throw new Error("Missing sign in code. Paste it in Step 1.");
    }
+   await this.waitForGis(8000);
    if (!this.ensureGisLoaded()) {
-    throw new Error("Google sign-in library is still loading or blocked. Check your connection / ad-blocker and reload.");
+    throw new Error("Google sign-in library did not load. Allow accounts.google.com in your ad blocker and Firefox protection, reload, and try again.");
    }
    const scopes = (global.ARCHIVE_CONFIG && global.ARCHIVE_CONFIG.SCOPES) || "https://www.googleapis.com/auth/gmail.readonly";
+   const self = this;
    return new Promise((resolve, reject) => {
     try {
-     this.tokenClient = global.google.accounts.oauth2.initTokenClient({
+     self.tokenClient = global.google.accounts.oauth2.initTokenClient({
       client_id: cid,
       scope: scopes,
       callback: (resp) => {
        if (resp && resp.access_token) {
-        this.accessToken = resp.access_token;
+        self.accessToken = resp.access_token;
         const secs = Number(resp.expires_in || 3600);
-        this.expiresAt = Date.now() + secs * 1000;
-        this.setClientId(cid);
+        self.expiresAt = Date.now() + secs * 1000;
+        self.setClientId(cid);
         resolve(resp);
        } else {
         reject(new Error("Google sign-in was cancelled or failed. No access token returned."));
@@ -64,7 +76,7 @@
       },
       error_callback: (err) => reject(new Error("Google sign-in error: " + (err && (err.message || err.type) || "unknown"))),
      });
-     this.tokenClient.requestAccessToken({ prompt: "consent" });
+     self.tokenClient.requestAccessToken({ prompt: "consent" });
     } catch (e) {
      reject(e);
     }
@@ -101,13 +113,14 @@
    }
   }
 
-  requestAccessTokenRedirect() {
+  async requestAccessTokenRedirect() {
    const cid = this.configuredClientId();
    if (!cid || cid === "PASTE_YOUR_CLIENT_ID_HERE") {
     throw new Error("Missing sign in code. Paste it in Step 1.");
    }
+   await this.waitForGis(8000);
    if (!this.ensureGisLoaded()) {
-    throw new Error("Google sign-in library is still loading or blocked. Check your connection / ad-blocker and reload.");
+    throw new Error("Google sign-in library did not load. Allow accounts.google.com in your ad blocker and Firefox protection, reload, and try again.");
    }
    const scopes = (global.ARCHIVE_CONFIG && global.ARCHIVE_CONFIG.SCOPES) || "https://www.googleapis.com/auth/gmail.readonly";
    const redirectUri = global.location.origin + global.location.pathname;
