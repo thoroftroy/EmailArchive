@@ -91,6 +91,17 @@
   }
  }
 
+ async function finishSignIn() {
+  state.profile = await state.gmail.getProfile().catch(() => null);
+  refreshConnectUI();
+  toast("Signed in" + (state.profile && state.profile.emailAddress ? " as " + state.profile.emailAddress : "") + ".");
+  saveHistoryEvent("signin", {});
+ }
+
+ function clearSigninTimer() {
+  if (state.signinTimer) { try { clearTimeout(state.signinTimer); } catch (e) {} state.signinTimer = null; }
+ }
+
  async function doSignIn() {
   const cid = $("client-id").value.trim() || (window.ARCHIVE_CONFIG && window.ARCHIVE_CONFIG.CLIENT_ID) || "";
   if (!cid || cid === "PASTE_YOUR_CLIENT_ID_HERE") {
@@ -100,12 +111,19 @@
   try {
    state.gmail.setClientId(cid);
    toast("Opening Google sign-in...");
+   statusDot(false, "Waiting for the Google window. Finish the steps there.");
+   clearSigninTimer();
+   state.signinTimer = setTimeout(() => {
+    if (!state.gmail.isSignedIn()) {
+     statusDot(false, "Still waiting for Google. No answer yet.");
+     toast("Still no answer from Google. If the Google window closed with no result, allow third party cookies for Google, allow popups, and try the redirect sign in below.", "err");
+    }
+   }, 90000);
    await state.gmail.requestAccessToken(cid);
-   state.profile = await state.gmail.getProfile().catch(() => null);
-   refreshConnectUI();
-   toast("Signed in" + (state.profile && state.profile.emailAddress ? " as " + state.profile.emailAddress : "") + ".");
-   saveHistoryEvent("signin", {});
+   clearSigninTimer();
+   await finishSignIn();
   } catch (e) {
+   clearSigninTimer();
    console.error(e);
    const msg = String((e && e.message) || e);
    if (msg.indexOf("access_denied") >= 0 || msg.indexOf("403") >= 0 || msg.toLowerCase().indexOf("blocked") >= 0) {
@@ -680,12 +698,33 @@
   $("btn-verify").addEventListener("click", renderVerify);
   $("btn-clear-history").addEventListener("click", () => { safeRemove("ga_history"); renderHistory(); });
 
-  // Sender helpers
+  async function maybeFinishRedirect() {
+  let res = null;
+  try { res = state.gmail.parseRedirectHash(); }
+  catch (e) { toast("Sign in return data was invalid. Please try again.", "err"); return; }
+  if (!res) return;
+  if (res.error) {
+   if (/access_denied/i.test(String(res.error))) toast("Sign in blocked. Only selected users can sign in. Use Send request in Step 1. Type your Gmail and press Send.", "err");
+   else toast("Sign in failed: " + (res.errorDesc || res.error), "err");
+  return;
+  }
+  state.gmail.setToken(res.accessToken, res.expiresIn);
+  try { state.gmail.setClientId(state.gmail.configuredClientId()); } catch (e) {}
+  await finishSignIn();
+ }
+
+ // Sender helpers
   $("btn-sample").addEventListener("click", () => {
    $("senders").value = "example@gmail.com";
    toast("Sample sender filled in. Replace it with the real address.");
   const sendBtn = $("btn-send-request");
   if (sendBtn) sendBtn.addEventListener("click", sendAccessRequest);
+  const redirBtn = $("btn-signin-redirect");
+  if (redirBtn) redirBtn.addEventListener("click", () => {
+   try { state.gmail.requestAccessTokenRedirect(); }
+   catch (e) { toast("Sign-in failed: " + ((e && e.message) || e), "err"); }
+  });
+  maybeFinishRedirect();
   });
 
   refreshConnectUI();

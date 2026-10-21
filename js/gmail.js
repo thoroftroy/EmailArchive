@@ -71,6 +71,64 @@
    });
   }
 
+  setToken(token, expiresInSecs) {
+   this.accessToken = String(token || "");
+   const secs = Number(expiresInSecs || 3600);
+   this.expiresAt = Date.now() + (isFinite(secs) ? secs : 3600) * 1000;
+  }
+
+  parseRedirectHash() {
+   try {
+    const loc = global.location;
+    if (!loc || !loc.hash) return null;
+    const h = String(loc.hash);
+    if (h.indexOf("access_token=") < 0 && h.indexOf("error=") < 0) return null;
+    const params = new URLSearchParams(h.charAt(0) === "#" ? h.slice(1) : h);
+    const err = params.get("error");
+    if (err) return { error: err, errorDesc: params.get("error_description") || "" };
+    const tok = params.get("access_token");
+    if (!tok) return null;
+    let want = "";
+    try { want = sessionStorage.getItem("ga_oauth_state") || ""; } catch (e) { want = ""; }
+    try { sessionStorage.removeItem("ga_oauth_state"); } catch (e) {}
+    const got = params.get("state") || "";
+    if (want && got !== want) throw new Error("Sign in return check failed. Please try again.");
+    try { if (global.history && global.history.replaceState) global.history.replaceState(null, "", loc.pathname + loc.search); } catch (e) {}
+    return { accessToken: tok, expiresIn: Number(params.get("expires_in") || 3600) };
+   } catch (e) {
+    if (e && e.message && e.message.indexOf("return check failed") >= 0) throw e;
+    return null;
+   }
+  }
+
+  requestAccessTokenRedirect() {
+   const cid = this.configuredClientId();
+   if (!cid || cid === "PASTE_YOUR_CLIENT_ID_HERE") {
+    throw new Error("Missing sign in code. Paste it in Step 1.");
+   }
+   if (!this.ensureGisLoaded()) {
+    throw new Error("Google sign-in library is still loading or blocked. Check your connection / ad-blocker and reload.");
+   }
+   const scopes = (global.ARCHIVE_CONFIG && global.ARCHIVE_CONFIG.SCOPES) || "https://www.googleapis.com/auth/gmail.readonly";
+   const redirectUri = global.location.origin + global.location.pathname;
+   let st = "";
+   try {
+    st = "ga" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    sessionStorage.setItem("ga_oauth_state", st);
+   } catch (e) { st = ""; }
+   this.tokenClient = global.google.accounts.oauth2.initTokenClient({
+    client_id: cid,
+    scope: scopes,
+    ux_mode: "redirect",
+    redirect_uri: redirectUri,
+    state: st,
+    callback: function () {},
+    error_callback: function () {}
+   });
+   this.setClientId(cid);
+   this.tokenClient.requestAccessToken({ prompt: "consent" });
+  }
+
   signOut() {
    const tok = this.accessToken;
    this.accessToken = null;
