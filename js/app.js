@@ -10,6 +10,7 @@
   profile: null,
   searchResults: [],  // enriched message summaries for preview
   enriched: [],    // full enriched messages ready for export
+  fullCache: null,      // id -> full message payloads already fetched during preview
   query: "",
   queryHuman: "",
   cancelled: false,
@@ -239,6 +240,7 @@
    all.sort((a, b) => Number(a.internalDate) - Number(b.internalDate));
 
    state.searchResults = all.map((m) => summarizeFull(m));
+   state.fullCache = seenMsg;
    renderPreview(startDate, endDate);
    setProgress(100, "Preview ready.");
    setTimeout(() => showProgress(false), 600);
@@ -337,12 +339,37 @@
    const concurrency = 3;
    const queue = state.searchResults.slice();
 
+   // One raw thread call per conversation instead of one raw call per message.
+   // Anything missed here falls back to a single fetch inside the worker.
+   const rawById = new Map();
+   if (opts.includeEml !== false) {
+    const tids = [...new Set(queue.map((s) => s.threadId).filter(Boolean))];
+    log("Fetching originals in " + tids.length + " thread batches...");
+    let tDone = 0;
+    for (const tid of tids) {
+     if (state.cancelled) throw new Error("CANCELLED");
+     try {
+      const th = await state.gmail.getThreadRaw(tid);
+      for (const m of (th.messages || [])) {
+       if (m && m.id && m.raw) rawById.set(m.id, m.raw);
+      }
+     } catch (e) {
+      log("Thread batch missed, will fetch singly (" + (e.message || e) + ")");
+     }
+     tDone++;
+     if (tDone % 10 === 0 || tDone === tids.length) {
+      setProgress(Math.round(5 * tDone / Math.max(1, tids.length)), "Fetching originals " + tDone + "/" + tids.length + " threads...");
+     }
+     await new Promise((r) => setTimeout(r, 0));
+    }
+   }
+
    async function worker() {
     while (queue.length) {
      if (state.cancelled) throw new Error("CANCELLED");
      const s = queue.shift();
      try {
-      const e = await enrichOne(s, opts);
+      const e = await enrichOne(s, opts, rawById);
       enriched.push(e);
       ok++;
      } catch (err) {
@@ -351,7 +378,7 @@
       enriched.push(enrichFailed(s, err));
      }
      const done = ok + fail;
-     setProgress(Math.round(60 * done / total), "Downloaded " + done + "/" + total + " (" + fail + " failed)...");
+     setProgress(Math.round(5 + 55 * done / total), "Downloaded " + done + "/" + total + " (" + fail + " failed)...");
      await new Promise((r) => setTimeout(r, 0));
     }
    }
@@ -432,22 +459,24 @@
   }
  }
 
- async function enrichOne(summary, opts) {
+ async function enrichOne(summary, opts, rawById) {
   const g = state.gmail;
   const U = window.ArchiveUtils;
-  // Raw MIME for .eml (authoritative original).
+  // Raw MIME for .eml (authoritative original). Prefetched per thread when possible.
   let raw = null, emlBytes = null, emlError = "";
   if (opts.includeEml !== false) {
    try {
-    raw = await g.getMessageRaw(summary.id);
+    const pre = rawById ? rawById.get(summary.id) : null;
+    raw = pre ? { raw: pre } : await g.getMessageRaw(summary.id);
     emlBytes = U.base64UrlToUint8(raw.raw || "");
    } catch (e) {
     emlError = e.message || String(e);
     // Fall back: still export metadata + body without .eml.
    }
   }
-  // Full payload for body + attachment metadata.
-  const full = await g.getMessageFull(summary.id);
+  // Full payload for body + attachment metadata. Reuse the preview copy when present.
+  const cached = state.fullCache ? state.fullCache.get(summary.id) : null;
+  const full = cached || await g.getMessageFull(summary.id);
   const payload = full.payload || {};
   const headers = payload.headers || [];
   const bodies = window.GmailHelpers.findBodies(payload);

@@ -13,6 +13,16 @@
    this.expiresAt = 0;
    this.tokenClient = null;
    this.clientId = "";
+   // Gap between Gmail calls so we stay far under the per user per second quota.
+   this.lastCallAt = 0;
+   this.minGapMs = 150;
+  }
+
+  async _pace() {
+   const now = Date.now();
+   const wait = this.minGapMs - (now - this.lastCallAt);
+   if (wait > 0) await sleep(wait);
+   this.lastCallAt = Date.now();
   }
 
   configuredClientId() {
@@ -170,6 +180,7 @@
    let lastErr = null;
    for (let attempt = 0; attempt <= retry; attempt++) {
     try {
+     await this._pace();
      const res = await fetch(API_BASE + path, {
       method: opts.method || "GET",
       headers: { Authorization: "Bearer " + this.accessToken },
@@ -177,25 +188,28 @@
      if (res.status === 401) {
       throw new Error("AUTH_EXPIRED: Google rejected the access token. Please sign in again.");
      }
-     if (res.status === 403 && attempt < retry) {
-      // Rate limit / quota. back off.
-      await sleep(1200 * Math.pow(2, attempt));
+     if (res.ok) return await res.json();
+     let retryAfterMs = 0;
+     try {
+      const ra = Number(res.headers.get("Retry-After") || 0);
+      if (isFinite(ra) && ra > 0) retryAfterMs = Math.min(ra * 1000, 60000);
+     } catch (e) {}
+     let detail = "", reason = "";
+     try {
+      const j = await res.json();
+      detail = (j && j.error && j.error.message) || "";
+      const errs = (j && j.error && j.error.errors) || [];
+      reason = errs.map((x) => (x && x.reason) || "").join(",");
+     } catch (e) { try { detail = await res.text(); } catch (e2) {} }
+     const msg = "Gmail API error " + res.status + ": " + (detail || res.statusText);
+     const rateLike = res.status === 429 || res.status >= 500 ||
+      (res.status === 403 && /ratelimit|quota|userRateLimitExceeded/i.test(reason + " " + detail));
+     if (rateLike && attempt < retry) {
+      // True rate or quota pressure. Wait as Google instructs, at minimum back off.
+      await sleep(Math.max(1500 * Math.pow(2, attempt), retryAfterMs));
       continue;
      }
-     if (res.status === 429 && attempt < retry) {
-      await sleep(1500 * Math.pow(2, attempt));
-      continue;
-     }
-     if (res.status >= 500 && attempt < retry) {
-      await sleep(1000 * Math.pow(2, attempt));
-      continue;
-     }
-     if (!res.ok) {
-      let detail = "";
-      try { const j = await res.json(); detail = (j && j.error && j.error.message) || ""; } catch (e) { try { detail = await res.text(); } catch (e2) {} }
-      throw new Error("Gmail API error " + res.status + ": " + (detail || res.statusText));
-     }
-     return await res.json();
+     throw new Error(msg);
     } catch (e) {
      lastErr = e;
      if (String(e && e.message).startsWith("AUTH_EXPIRED")) throw e;
