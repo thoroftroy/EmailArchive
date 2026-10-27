@@ -11,6 +11,7 @@
   searchResults: [],  // enriched message summaries for preview
   enriched: [],    // full enriched messages ready for export
   fullCache: null,      // id -> full message payloads already fetched during preview
+  logFn: null,            // active export log writer, if any
   query: "",
   queryHuman: "",
   cancelled: false,
@@ -47,6 +48,22 @@
    return;
   }
   setStep(n);
+ }
+
+ function etaText(done, total, t0) {
+  if (!total || total <= 0 || done <= 0) return "calculating time left.";
+  if (done >= total) return "almost done.";
+  const left = (Date.now() - t0) / done * (total - done);
+  if (left < 3000) return "almost done.";
+  return "about " + U.formatEta(left) + " left.";
+ }
+
+ function noteThrottle(info) {
+  const s = "Google asked us to slow down. Waiting " + Math.max(1, Math.round(info.waitMs / 1000)) + "s, then continuing automatically. Nothing is lost.";
+  const a = $("progress-label"), b = $("export-progress-label");
+  if (a) a.textContent = s;
+  if (b) b.textContent = s;
+  if (state.logFn) { try { state.logFn(s); } catch (e) {} }
  }
 
  function setProgress(pct, label) {
@@ -190,6 +207,10 @@
   const maxTotal = Math.max(50, Math.min(5000, Number($("max-messages").value) || 1000));
 
   state.cancelled = false;
+  state.gmail.cancelRequested = false;
+  state.gmail.onThrottle = noteThrottle;
+  const pvStartT = Date.now();
+  const callsAtStart = state.gmail.totalCalls;
   setStep(3);
   showProgress(true);
   setProgress(4, "Searching Gmail...");
@@ -216,11 +237,11 @@
    const threadIds = [...new Set(ids.map((x) => x.threadId).filter(Boolean))];
    setProgress(38, "Including full conversation threads (" + threadIds.length + " threads)...");
 
-   const seenMsg = new Map(); // id -> full message (dedupe across threads)
+   const seenMsg = new Map(); // id -> message (dedupe across threads)
    let done = 0;
-   const concurrency = 4;
+   const concurrency = 2;
    async function fetchThread(tid) {
-    const t = await state.gmail.getThreadFull(tid);
+    const t = await state.gmail.getThreadMetadata(tid);
     for (const m of (t.messages || [])) {
      if (m && m.id && !seenMsg.has(m.id)) seenMsg.set(m.id, m);
     }
@@ -230,10 +251,11 @@
     if (state.cancelled) throw new Error("CANCELLED");
     await Promise.all(threadIds.slice(i, i + concurrency).map(fetchThread));
     done += Math.min(concurrency, threadIds.length - i);
-    setProgress(38 + Math.round(40 * (done / Math.max(1, threadIds.length))), "Reading threads " + done + "/" + threadIds.length + "...");
+    setProgress(38 + Math.round(40 * (done / Math.max(1, threadIds.length))), "Reading threads " + done + "/" + threadIds.length + ". " + etaText(done, threadIds.length, pvStartT));
     await new Promise((r) => setTimeout(r, 0));
    }
 
+   state.gmail.onThrottle = null;
    // Phase C: client-side inclusive date filter + summarize.
    let all = [...seenMsg.values()];
    all = all.filter((m) => U.isDateInRange(Number(m.internalDate), startDate, endDate));
@@ -241,6 +263,15 @@
 
    state.searchResults = all.map((m) => summarizeFull(m));
    state.fullCache = seenMsg;
+   {
+    const pvSecs = (Date.now() - pvStartT) / 1000;
+    const pvCalls = state.gmail.totalCalls - callsAtStart;
+    const pvRate = pvSecs > 1 ? pvCalls / pvSecs : 0;
+    if (pvRate > 0) {
+     const estCalls = threadIds.length * 2 + state.searchResults.length + Math.round(state.searchResults.length * 0.5);
+     $("preview-summary").textContent += " Export will make roughly " + estCalls + " more calls, " + U.formatEta(estCalls / pvRate * 1000) + " at this speed.";
+    }
+   }
    renderPreview(startDate, endDate);
    setProgress(100, "Preview ready.");
    setTimeout(() => showProgress(false), 600);
@@ -317,6 +348,10 @@
   if (state.exporting) return;
   const opts = readOptions();
   state.cancelled = false;
+  state.gmail.cancelRequested = false;
+  state.gmail.onThrottle = noteThrottle;
+  const exStart = Date.now();
+  const exCallsAtStart = state.gmail.totalCalls;
   state.exporting = true;
   setStep(5);
   showProgress(true);
@@ -327,6 +362,7 @@
   $("done-card").hidden = true;
 
   const log = (s) => { $("export-log").textContent += s + "\n"; $("export-log").scrollTop = 1e9; };
+  state.logFn = log;
   const setStepLabel = (t) => { $("export-step").textContent = t; };
 
   try {
@@ -342,6 +378,8 @@
    // One raw thread call per conversation instead of one raw call per message.
    // Anything missed here falls back to a single fetch inside the worker.
    const rawById = new Map();
+   const fullById = new Map();
+   const pfT0 = Date.now();
    if (opts.includeEml !== false) {
     const tids = [...new Set(queue.map((s) => s.threadId).filter(Boolean))];
     log("Fetching originals in " + tids.length + " thread batches...");
@@ -353,12 +391,16 @@
       for (const m of (th.messages || [])) {
        if (m && m.id && m.raw) rawById.set(m.id, m.raw);
       }
+      const tf = await state.gmail.getThreadFull(tid);
+      for (const m of (tf.messages || [])) {
+       if (m && m.id && m.payload && !fullById.has(m.id)) fullById.set(m.id, m);
+      }
      } catch (e) {
       log("Thread batch missed, will fetch singly (" + (e.message || e) + ")");
      }
      tDone++;
      if (tDone % 10 === 0 || tDone === tids.length) {
-      setProgress(Math.round(5 * tDone / Math.max(1, tids.length)), "Fetching originals " + tDone + "/" + tids.length + " threads...");
+      setProgress(Math.round(8 * tDone / Math.max(1, tids.length)), "Fetching originals " + tDone + "/" + tids.length + " threads. " + etaText(tDone, tids.length, pfT0));
      }
      await new Promise((r) => setTimeout(r, 0));
     }
@@ -369,7 +411,7 @@
      if (state.cancelled) throw new Error("CANCELLED");
      const s = queue.shift();
      try {
-      const e = await enrichOne(s, opts, rawById);
+      const e = await enrichOne(s, opts, rawById, fullById);
       enriched.push(e);
       ok++;
      } catch (err) {
@@ -378,10 +420,11 @@
       enriched.push(enrichFailed(s, err));
      }
      const done = ok + fail;
-     setProgress(Math.round(5 + 55 * done / total), "Downloaded " + done + "/" + total + " (" + fail + " failed)...");
+     setProgress(Math.round(8 + 52 * done / total), "Downloaded " + done + "/" + total + " (" + fail + " failed). " + etaText(done, total, dlT0));
      await new Promise((r) => setTimeout(r, 0));
     }
    }
+   const dlT0 = Date.now();
    await Promise.all(Array.from({ length: Math.min(concurrency, total) }, worker));
    enriched.sort((a, b) => Number(a.internalDate) - Number(b.internalDate));
    // Re-number in chronological order.
@@ -405,6 +448,7 @@
      }
     }
    }
+   const pdfT0 = Date.now();
    const pdfRes = await window.PdfBuilder.buildMasterPdf(enriched, {
     title: opts.title,
     query: state.query,
@@ -414,7 +458,7 @@
     audioHandling: opts.audioHandling,
     shouldCancel: () => state.cancelled,
    }, (p) => {
-    if (p.stage === "pdf") setProgress(66 + Math.round(14 * p.done / Math.max(1, p.total)), "PDF page " + p.done + "/" + p.total + "...");
+    if (p.stage === "pdf") setProgress(66 + Math.round(14 * p.done / Math.max(1, p.total)), "PDF page " + p.done + "/" + p.total + ". " + etaText(p.done, Math.max(1, p.total), pdfT0));
    });
    state.lastPdfBytes = pdfRes.bytes;
    log("PDF built: " + pdfRes.pageCount + " pages, " + U.formatBytes(pdfRes.bytes.length));
@@ -422,6 +466,7 @@
    // Phase 3: assemble ZIP (eml + attachments + pdf + csv + logs + checksums).
    setStepLabel("Step 3 of 3. Zipping + checksums...");
    setProgress(84, "Assembling ZIP archive...");
+   const zipT0 = Date.now();
    const built = await window.ExportBuilder.assembleArchive({
     messages: enriched,
     options: opts,
@@ -430,7 +475,7 @@
     pdfBytes: pdfRes.bytes,
     shouldCancel: () => state.cancelled,
     onProgress: (p) => {
-     if (p.stage === "compress") setProgress(90 + Math.round(p.percent / 10), "Compressing ZIP " + Math.round(p.percent) + "%...");
+     if (p.stage === "compress") setProgress(90 + Math.round(p.percent / 10), "Compressing ZIP " + Math.round(p.percent) + "%. " + etaText(Math.round(p.percent), 100, zipT0));
     },
    });
    state.lastZipBlob = built.zipBlob;
@@ -441,6 +486,9 @@
    log("ZIP: " + U.formatBytes(built.stats.zipBytes) + ". eml=" + built.stats.emlCount + ". attachments saved=" + built.stats.attSaved + ". skipped=" + built.stats.attSkipped + ". failed=" + built.stats.attFailed);
    if (!built.stats.complete) log("WARNING: " + built.stats.failedMessages + " error(s). NOT complete. See errors in completion screen.");
 
+   built.stats.tookMs = Date.now() - exStart;
+   built.stats.apiCalls = state.gmail.totalCalls - exCallsAtStart;
+   log("Total time: " + U.formatEta(built.stats.tookMs) + ". Gmail calls: " + built.stats.apiCalls + " (" + (built.stats.apiCalls / Math.max(1, (Date.now() - exStart) / 1000)).toFixed(1) + "/s).");
    showDone(built.stats, opts);
    saveHistoryEvent("export", { query: state.query, messages: built.stats.messageCount, complete: built.stats.complete });
   } catch (e) {
@@ -455,11 +503,13 @@
    }
   } finally {
    state.exporting = false;
+   state.logFn = null;
+   state.gmail.onThrottle = null;
    $("btn-cancel-export").hidden = true;
   }
  }
 
- async function enrichOne(summary, opts, rawById) {
+ async function enrichOne(summary, opts, rawById, fullById) {
   const g = state.gmail;
   const U = window.ArchiveUtils;
   // Raw MIME for .eml (authoritative original). Prefetched per thread when possible.
@@ -475,8 +525,10 @@
    }
   }
   // Full payload for body + attachment metadata. Reuse the preview copy when present.
-  const cached = state.fullCache ? state.fullCache.get(summary.id) : null;
-  const full = cached || await g.getMessageFull(summary.id);
+  const fromBatch = fullById ? fullById.get(summary.id) : null;
+  const pc = state.fullCache ? state.fullCache.get(summary.id) : null;
+  const cachedFull = (pc && pc.payload && (pc.payload.parts || (pc.payload.body && pc.payload.body.data))) ? pc : null;
+  const full = fromBatch || cachedFull || await g.getMessageFull(summary.id);
   const payload = full.payload || {};
   const headers = payload.headers || [];
   const bodies = window.GmailHelpers.findBodies(payload);
@@ -566,6 +618,8 @@
    ["Attachments saved", String(stats.attSaved) + (stats.attSkipped ? ", skipped: " + stats.attSkipped : "") + (stats.attFailed ? ", FAILED: " + stats.attFailed : "")],
    ["Master PDF", stats.pdfPath || "(none)"],
    ["ZIP size", U.formatBytes(stats.zipBytes)],
+   ["Time taken", stats.tookMs ? U.formatEta(stats.tookMs) : "(unknown)"],
+   ["Gmail calls", (stats.apiCalls != null ? String(stats.apiCalls) : "(unknown)")],
    ["Integrity", ok ? "All files hashed (checksums.sha256). No errors reported. Still, compare counts to be sure." : stats.failedMessages + " error(s). NOT complete. Fix and run again. Running again is safe and will not change Gmail."],
   ];
   for (const [k, v] of lines) {
@@ -741,8 +795,8 @@
   $("btn-preview").addEventListener("click", doPreview);
   $("btn-to-customize").addEventListener("click", () => goStep(4));
   $("btn-export").addEventListener("click", doExport);
-  $("btn-cancel-export").addEventListener("click", () => { state.cancelled = true; });
-  $("btn-cancel-preview").addEventListener("click", () => { state.cancelled = true; });
+  $("btn-cancel-export").addEventListener("click", () => { state.cancelled = true; state.gmail.cancelRequested = true; });
+  $("btn-cancel-preview").addEventListener("click", () => { state.cancelled = true; state.gmail.cancelRequested = true; });
   $("btn-download-zip").addEventListener("click", () => {
    if (state.lastZipBlob) downloadBlob(state.lastZipBlob, "gmail-archive-" + Date.now() + ".zip");
   });

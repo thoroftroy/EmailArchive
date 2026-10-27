@@ -46,7 +46,8 @@ Tested here 2026-10-21:
 
 ## Known limits
 
-  * Max messages setting defaults to 1000, max 5000 per run. For big mailboxes do one year at a time.
+  * Max messages setting defaults to 1000, max 5000 per run. For big mailboxes you can still go one year at a time for speed.
+  * Rate limits are handled for you. The app previews with light requests, batches originals per thread, reuses preview data, paces calls, waits out quota windows automatically with growing gaps, shows time left on every stage, and never treats a rate error as a failed export. Cancel stays available throughout.
   * One message body in the PDF is cut at 60000 chars. Full text stays in the `.eml`.
   * Image previews only for images under about 900 KB. Video and audio are never put in the PDF. They are listed and saved next to it, or skipped if you pick skip.
   * SHA check needs `https` or `http://localhost`. GitHub Pages is fine. Opening the file straight from disk is not fine.

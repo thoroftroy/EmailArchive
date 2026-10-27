@@ -82,3 +82,14 @@ describe("senderKey", () => {
     assert.equal(U.senderKey("carol@y.org"), "carol@y.org");
   });
 });
+
+describe("formatEta", () => {
+  it("describes short and long waits", () => {
+    assert.equal(U.formatEta(2000), "a few seconds");
+    assert.equal(U.formatEta(45000), "about 45 sec");
+    assert.equal(U.formatEta(60000), "about 1 min");
+    assert.equal(U.formatEta(90000), "about 1 min 30 sec");
+    assert.equal(U.formatEta(3600000), "about 1 hr");
+    assert.equal(U.formatEta(3900000), "about 1 hr 5 min");
+  });
+});

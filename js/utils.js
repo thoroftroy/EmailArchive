@@ -134,7 +134,18 @@
   return lines.join("\r\n") + "\r\n";
  }
 
- function formatBytes(n) {
+ function formatEta(ms) {
+  ms = Math.max(0, Number(ms) || 0);
+  const s = Math.round(ms / 1000);
+  if (s < 5) return "a few seconds";
+  if (s < 60) return "about " + s + " sec";
+  const m = Math.floor(s / 60), rs = s % 60;
+  if (m < 60) return rs === 0 ? ("about " + m + " min") : ("about " + m + " min " + rs + " sec");
+  const h = Math.floor(m / 60), rm = m % 60;
+  return rm === 0 ? ("about " + h + " hr") : ("about " + h + " hr " + rm + " min");
+}
+
+function formatBytes(n) {
   n = Number(n);
   if (!Number.isFinite(n) || n < 0) return ". ";
   if (n < 1024) return n + " B";
@@ -205,7 +216,7 @@
  const api = {
   sanitizeFilename, sanitizeFolder, base64UrlToUint8, uint8ToStringUtf8,
   formatGmailDateForQuery, addDaysIso, buildGmailQuery, isDateInRange,
-  extractHeader, csvEscape, buildCsv, formatBytes, formatDateTime,
+  extractHeader, csvEscape, buildCsv, formatBytes, formatEta, formatDateTime,
   truncate, stripHtml, getNextAvailableName, senderKey, shortThreadLabel
  };
 

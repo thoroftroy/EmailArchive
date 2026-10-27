@@ -44,7 +44,7 @@ It saves emails from people you pick into one tidy download. Good for records, l
 
 ## Tips
 
-  * Big inbox. Do smaller date ranges. One year at a time works well.
+  * Big inbox. Just let it run. The app slows down by itself and waits out limits, with a time estimate on screen. Smaller date ranges still finish faster.
   * Net dropped. Just press Build again.
   * Want a fresh start. Press Start a new archive.
   * History stays in this browser only. Clear history removes it.

@@ -13,9 +13,16 @@
    this.expiresAt = 0;
    this.tokenClient = null;
    this.clientId = "";
-   // Gap between Gmail calls so we stay far under the per user per second quota.
+   // Gap between Gmail calls. Starts gentle and grows automatically whenever
+   // Google reports quota pressure, so long runs always finish instead of failing.
    this.lastCallAt = 0;
-   this.minGapMs = 150;
+   this.minGapMs = 250;
+   this.maxGapMs = 10000;
+   this.throttleLevel = 0;
+   this.totalCalls = 0;
+   this.callTimes = [];
+   this.onThrottle = null;
+   this.cancelRequested = false;
   }
 
   async _pace() {
@@ -23,6 +30,34 @@
    const wait = this.minGapMs - (now - this.lastCallAt);
    if (wait > 0) await sleep(wait);
    this.lastCallAt = Date.now();
+   this.totalCalls++;
+   try {
+    this.callTimes.push(this.lastCallAt);
+    while (this.callTimes.length && this.callTimes[0] < this.lastCallAt - 120000) this.callTimes.shift();
+   } catch (e) {}
+  }
+
+  callsInLastMinute() {
+   try {
+    const cut = Date.now() - 60000;
+    let n = 0;
+    for (let i = this.callTimes.length - 1; i >= 0; i--) {
+     if (this.callTimes[i] >= cut) n++;
+     else break;
+    }
+    return n;
+   } catch (e) { return 0; }
+  }
+
+  async _sleepInterruptible(ms) {
+   let left = Math.max(0, Number(ms) || 0);
+   while (left > 0) {
+    if (this.cancelRequested) throw new Error("CANCELLED");
+    const chunk = Math.min(left, 2000);
+    await sleep(chunk);
+    left -= chunk;
+   }
+   if (this.cancelRequested) throw new Error("CANCELLED");
   }
 
   configuredClientId() {
@@ -175,10 +210,10 @@
 
   async apiFetch(path, opts, retry) {
    opts = opts || {};
-   retry = retry == null ? 4 : retry;
+   const maxNetRetries = retry == null ? 4 : retry;
+   let netAttempts = 0;
    if (!this.isSignedIn()) throw new Error("Not signed in (token missing or expired). Please sign in again in Step 1.");
-   let lastErr = null;
-   for (let attempt = 0; attempt <= retry; attempt++) {
+   for (;;) {
     try {
      await this._pace();
      const res = await fetch(API_BASE + path, {
@@ -192,7 +227,7 @@
      let retryAfterMs = 0;
      try {
       const ra = Number(res.headers.get("Retry-After") || 0);
-      if (isFinite(ra) && ra > 0) retryAfterMs = Math.min(ra * 1000, 60000);
+      if (isFinite(ra) && ra > 0) retryAfterMs = Math.min(ra * 1000, 120000);
      } catch (e) {}
      let detail = "", reason = "";
      try {
@@ -202,31 +237,41 @@
       reason = errs.map((x) => (x && x.reason) || "").join(",");
      } catch (e) { try { detail = await res.text(); } catch (e2) {} }
      const msg = "Gmail API error " + res.status + ": " + (detail || res.statusText);
-     const rateLike = res.status === 429 || res.status >= 500 ||
+     const rateLike = res.status === 429 || res.status === 503 ||
       (res.status === 403 && /ratelimit|quota|userRateLimitExceeded/i.test(reason + " " + detail));
-     if (rateLike && attempt < retry) {
-      // True rate or quota pressure. Wait as Google instructs, at minimum back off.
-      await sleep(Math.max(1500 * Math.pow(2, attempt), retryAfterMs));
+     if (rateLike) {
+      // Quota pressure is never a failure. Wait as Google instructs, slow the
+      // steady pace further, then continue the same run for as long as needed.
+      this.throttleLevel++;
+      this.minGapMs = Math.min(this.maxGapMs, Math.max(this.minGapMs * 1.5, 500));
+      const waitMs = Math.max(1500 * Math.pow(2, Math.min(this.throttleLevel, 6)), retryAfterMs);
+      try { if (typeof this.onThrottle === "function") this.onThrottle({ waitMs: waitMs, gapMs: this.minGapMs }); } catch (e) {}
+      await this._sleepInterruptible(waitMs);
       continue;
      }
      throw new Error(msg);
     } catch (e) {
-     lastErr = e;
-     if (String(e && e.message).startsWith("AUTH_EXPIRED")) throw e;
-     if (attempt >= retry) throw e;
+     const em = String((e && e.message) || e);
+     if (em.indexOf("AUTH_EXPIRED") === 0 || em === "CANCELLED") throw e;
      if (e instanceof TypeError) {
-      // Network interruption. wait and retry.
-      await sleep(1200 * Math.pow(2, attempt));
+      // Network interruption. bounded retries, then fail loudly.
+      netAttempts++;
+      if (netAttempts > maxNetRetries) throw e;
+      await this._sleepInterruptible(1200 * Math.pow(2, netAttempts));
       continue;
      }
      throw e;
     }
    }
-   throw lastErr || new Error("Gmail request failed");
   }
 
   async getProfile() {
    return this.apiFetch("/profile");
+  }
+
+  async getThreadMetadata(threadId) {
+   const heads = ["From", "To", "Cc", "Subject", "Date", "Message-ID"].map((h) => "&metadataHeaders=" + encodeURIComponent(h)).join("");
+   return this.apiFetch("/threads/" + encodeURIComponent(threadId) + "?format=metadata" + heads);
   }
 
   async listMessagesPage(query, pageToken, maxResults) {
